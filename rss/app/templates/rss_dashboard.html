@@ -1,0 +1,2320 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <script>
+        (function() {
+            const token = localStorage.getItem('auth_token');
+            if (!token) {
+                window.location.href = '/login';
+            }
+        })();
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b1220">
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="/static/icons/apple-icon-180.png">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js');
+            });
+        }
+    </script>
+    <title>RSS Bot 仪表盘</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.5/dist/sweetalert2.min.css">
+    <style>
+        :root {
+            --bg-1: #0b1220;
+            --bg-2: #0f1b2d;
+            --bg-3: #12243a;
+            --glass: rgba(18, 29, 45, 0.74);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --accent: #0a84ff;
+            --accent-soft: rgba(10, 132, 255, 0.18);
+            --success: #34c759;
+            --warning: #ff9f0a;
+            --danger: #ff3b30;
+            --text: #e6edf3;
+            --muted: #9fb0c3;
+            --shadow: 0 24px 60px rgba(5, 10, 18, 0.65);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            font-family: "Manrope", "SF Pro Display", "Helvetica Neue", sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(circle at 15% 20%, rgba(10, 132, 255, 0.24), transparent 40%),
+                radial-gradient(circle at 80% 10%, rgba(52, 199, 89, 0.2), transparent 42%),
+                radial-gradient(circle at 10% 90%, rgba(0, 122, 255, 0.15), transparent 50%),
+                linear-gradient(150deg, var(--bg-1), var(--bg-3));
+            padding: 20px;
+        }
+
+        .page-shell {
+            min-height: calc(100vh - 40px);
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 28px;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(26px);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            animation: rise 0.9s ease;
+        }
+
+        .navbar-custom {
+            padding: 18px 26px;
+            background: rgba(10, 18, 28, 0.7);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 700;
+            font-size: 18px;
+        }
+
+        .brand-badge {
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
+            background: rgba(10, 132, 255, 0.2);
+            display: grid;
+            place-items: center;
+            color: var(--accent);
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-pill {
+            padding: 8px 16px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text);
+            font-size: 13px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        }
+
+        .btn-pill:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 12px 24px rgba(10, 132, 255, 0.15);
+        }
+
+        .btn-primary-pill {
+            background: linear-gradient(135deg, rgba(10, 132, 255, 0.85), rgba(10, 132, 255, 0.6));
+            border: none;
+        }
+
+        .status-pill {
+            padding: 6px 14px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.06);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--success);
+            box-shadow: 0 0 12px rgba(52, 199, 89, 0.9);
+            animation: pulse 1.6s ease-in-out infinite;
+        }
+
+        .status-dot.offline {
+            background: var(--danger);
+            box-shadow: 0 0 12px rgba(255, 59, 48, 0.8);
+        }
+
+        .glass-card {
+            background: rgba(15, 24, 38, 0.72);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 20px;
+            box-shadow: 0 16px 40px rgba(6, 12, 20, 0.55);
+            backdrop-filter: blur(18px);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 18px;
+            margin-bottom: 20px;
+        }
+
+        .stat-title {
+            font-size: 13px;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .stat-value {
+            font-size: 22px;
+            font-weight: 700;
+        }
+
+        .stat-meta {
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        .toolbar-card {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 18px;
+        }
+
+        .search-input {
+            flex: 1 1 260px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 999px;
+            padding: 10px 16px;
+            color: var(--text);
+        }
+
+        .search-input::placeholder {
+            color: rgba(159, 176, 195, 0.8);
+        }
+
+        .console-box {
+            background: #0b111c;
+            border-radius: 20px;
+            border: 1px solid rgba(0, 255, 157, 0.12);
+            padding: 16px;
+            font-family: "JetBrains Mono", "SF Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            color: #8efad1;
+            max-height: 320px;
+            overflow: hidden;
+        }
+
+        .console-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            color: #b5f5de;
+        }
+
+        .console-body {
+            max-height: 240px;
+            overflow-y: auto;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .log-line {
+            white-space: pre-wrap;
+        }
+
+        .log-info { color: #7aa7ff; }
+        .log-warning { color: #ffb454; }
+        .log-error { color: #ff6b6b; }
+        .log-debug { color: #a0aec0; }
+
+        .rules-grid {
+            margin-top: 6px;
+        }
+
+        .rule-card {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .rule-title {
+            font-weight: 700;
+            font-size: 15px;
+        }
+
+        .rule-meta {
+            color: var(--muted);
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .rule-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .rule-actions .btn-pill {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .modal-content {
+            background: rgba(12, 20, 32, 0.95);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+        }
+
+        .modal-header,
+        .modal-footer {
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+
+        .modal-title {
+            font-weight: 600;
+        }
+
+        .form-control,
+        .form-select {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            color: var(--text);
+            border-radius: 12px;
+        }
+
+        .form-control:focus,
+        .form-select:focus {
+            border-color: rgba(10, 132, 255, 0.6);
+            box-shadow: 0 0 0 0.2rem rgba(10, 132, 255, 0.2);
+            background: rgba(255, 255, 255, 0.12);
+            color: var(--text);
+        }
+
+        .form-check-input {
+            background-color: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .form-check-input:checked {
+            background-color: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .tab-pane .section-card {
+            background: rgba(15, 24, 38, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 14px;
+        }
+
+        .replace-rule-row,
+        .push-config-row {
+            border: 1px dashed rgba(255, 255, 255, 0.16);
+            border-radius: 12px;
+            padding: 10px;
+            margin-bottom: 10px;
+            background: rgba(12, 20, 32, 0.7);
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.6; }
+            50% { transform: scale(1.3); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.6; }
+        }
+
+        @keyframes rise {
+            from { opacity: 0; transform: translateY(16px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        @media (max-width: 768px) {
+            body { padding: 12px; }
+            .navbar-custom {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+            .toolbar-card {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .nav-actions {
+                width: 100%;
+                justify-content: space-between;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page-shell">
+        <div class="navbar-custom">
+            <div class="brand">
+                <span class="brand-badge"><i class="bi bi-broadcast"></i></span>
+                <span>RSS Bot</span>
+            </div>
+            <div class="nav-actions">
+                <div class="status-pill">
+                    <span class="status-dot offline" id="navBotDot"></span>
+                    <span id="navBotPing">-- ms</span>
+                </div>
+                <button class="btn-pill btn-primary-pill" data-bs-toggle="modal" data-bs-target="#settingsModal">
+                    <i class="bi bi-gear"></i> 全局设置
+                </button>
+                <a class="btn-pill" href="/logout">
+                    <i class="bi bi-box-arrow-right"></i> 退出
+                </a>
+            </div>
+        </div>
+
+        <div class="container-fluid py-4">
+            <div class="stats-grid">
+                <div class="glass-card">
+                    <div class="stat-title">Bot 信息</div>
+                    <div class="stat-value" id="botUsername">--</div>
+                    <div class="stat-meta">ID <span id="botId">--</span> · Ping <span id="botPing">--</span>ms</div>
+                    <div class="stat-meta">Session <span id="botSessionType">--</span> · DC <span id="botDcId">--</span></div>
+                </div>
+                <div class="glass-card">
+                    <div class="stat-title">运行状态</div>
+                    <div class="stat-value"><span id="systemUptime">--</span></div>
+                    <div class="stat-meta">CPU <span id="systemCpu">--</span>% · RAM <span id="systemMem">--</span>%</div>
+                    <div class="stat-meta">最近重连 <span id="botLastReconnect">--</span></div>
+                </div>
+                <div class="glass-card">
+                    <div class="stat-title">订阅概览</div>
+                    <div class="stat-value"><span id="rssCount">0</span> 个订阅</div>
+                    <div class="stat-meta">规则 <span id="ruleCount">0</span> · 今日转发 <span id="forwardCount">--</span></div>
+                    <div class="stat-meta">已处理消息 <span id="botMsgCount">0</span></div>
+                </div>
+            </div>
+
+            <div class="glass-card toolbar-card">
+                <input class="search-input" id="ruleSearch" placeholder="搜索规则名称或 ID">
+                <div class="d-flex flex-wrap gap-2">
+                    <button class="btn-pill btn-primary-pill" id="newRuleBtn">
+                        <i class="bi bi-plus-circle"></i> 新建规则
+                    </button>
+                    <button class="btn-pill" data-bs-toggle="collapse" data-bs-target="#logPanel" aria-expanded="false">
+                        <i class="bi bi-terminal"></i> 查看日志
+                    </button>
+                    <button class="btn-pill" data-bs-toggle="modal" data-bs-target="#sendTestModal">
+                        <i class="bi bi-send"></i> 发送测试
+                    </button>
+                </div>
+            </div>
+
+            <div class="collapse" id="logPanel">
+                <div class="glass-card console-box mb-3">
+                    <div class="console-header">
+                        <div>系统日志</div>
+                        <div class="d-flex align-items-center gap-2">
+                            <input type="text" class="form-control form-control-sm" id="logSearch" placeholder="搜索">
+                            <select class="form-select form-select-sm" id="logLevel">
+                                <option value="ALL">全部</option>
+                                <option value="INFO">INFO</option>
+                                <option value="WARNING">WARNING</option>
+                                <option value="ERROR">ERROR</option>
+                                <option value="DEBUG">DEBUG</option>
+                            </select>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="logAutoScroll" checked>
+                            </div>
+                            <button class="btn-pill" id="logCopy"><i class="bi bi-clipboard"></i></button>
+                            <button class="btn-pill" id="logClear"><i class="bi bi-trash"></i></button>
+                        </div>
+                    </div>
+                    <div class="console-body" id="logBody"></div>
+                </div>
+            </div>
+
+            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 rules-grid" id="rulesGrid">
+                {% if rules %}
+                {% for rule in rules %}
+                <div class="col rule-col" data-rule-id="{{ rule.id }}">
+                    <div class="glass-card rule-card">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="rule-title">
+                                {{ rule.source_chat.name if rule.source_chat else "未知来源" }}
+                                → {{ rule.target_chat.name if rule.target_chat else "未知目标" }}
+                            </div>
+                            <span class="status-dot offline" id="rule-dot-{{ rule.id }}"></span>
+                        </div>
+                        <div class="rule-meta">
+                            <span>ID {{ rule.id }}</span>
+                            <span id="rule-status-{{ rule.id }}">加载中</span>
+                        </div>
+                        <div class="rule-actions">
+                            <button class="btn-pill btn-primary-pill" onclick="openRuleEditor('{{ rule.id }}')">编辑</button>
+                            <button class="btn-pill" id="rule-toggle-{{ rule.id }}" onclick="toggleRule('{{ rule.id }}')">启用/停用</button>
+                            <button class="btn-pill text-danger" onclick="deleteRule('{{ rule.id }}')">删除</button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="col">
+                    <div class="glass-card">暂无规则。</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 全局设置 -->
+    <div class="modal fade" id="settingsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">全局设置</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <ul class="nav nav-tabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#settingsTelegram" type="button" role="tab">Telegram</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#settingsAI" type="button" role="tab">AI Service</button>
+                        </li>
+                    </ul>
+                    <div class="tab-content pt-3">
+                        <div class="tab-pane fade show active" id="settingsTelegram" role="tabpanel">
+                            <div class="section-card">
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label" for="tgApiId">API ID</label>
+                                        <input type="text" class="form-control" id="tgApiId">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label" for="tgApiHash">API Hash</label>
+                                        <input type="text" class="form-control" id="tgApiHash">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label" for="tgPhone">Phone</label>
+                                        <input type="text" class="form-control" id="tgPhone" placeholder="+86...">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label" for="tgBotToken">Bot Token</label>
+                                        <input type="password" class="form-control" id="tgBotToken" placeholder="留空保留现有">
+                                    </div>
+                                </div>
+                                <div class="mt-3 text-muted" id="tgSessionInfo">Session: --</div>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="settingsAI" role="tabpanel">
+                            <div class="section-card">
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="aiEnabled">
+                                            <label class="form-check-label" for="aiEnabled">启用 AI 总结</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label" for="aiProvider">Provider</label>
+                                        <select class="form-select" id="aiProvider">
+                                            <option value="openai">OpenAI</option>
+                                            <option value="gemini">Gemini</option>
+                                            <option value="deepseek">DeepSeek</option>
+                                            <option value="custom">Custom</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">模型名称</label>
+
+                                            <div class="input-group" id="aiModelSelectGroup">
+                                                <select class="form-select" id="aiModelSelect">
+                                                    <option value="" disabled selected>请点击右侧按钮获取列表...</option>
+                                                    <option value="custom">✍️ 手动输入...</option>
+                                                </select>
+                                                <button class="btn btn-outline-secondary" type="button" id="btnFetchModels">
+                                                    <i class="bi bi-cloud-download"></i> 获取
+                                                </button>
+                                            </div>
+
+                                            <div class="input-group mt-2" id="aiModelInputGroup" style="display: none;">
+                                                <input type="text" class="form-control" id="aiModelInput" placeholder="请输入模型 ID">
+                                                <button class="btn btn-outline-secondary" type="button" onclick="toggleModelInput(false)">
+                                                    <i class="bi bi-arrow-counterclockwise"></i> 返回列表
+                                                </button>
+                                            </div>
+                                            <div class="form-text" id="modelFetchStatus">优先从列表选择。如果没有您想要的，请选择“手动输入”。</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label" for="aiApiKey">API Key</label>
+                                        <input type="password" class="form-control" id="aiApiKey" placeholder="支持多个 Key 用逗号或换行分隔，留空保留现有">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label" for="aiKeyStrategy">多 Key 策略</label>
+                                        <select class="form-select" id="aiKeyStrategy">
+                                            <option value="sequence">顺序优先 (故障转移)</option>
+                                            <option value="random">随机轮询 (负载均衡)</option>
+                                        </select>
+                                        <div class="form-text">顺序：优先用第一个，挂了才换。随机：每次请求随机选。</div>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label" for="aiBaseUrl">Base URL</label>
+                                        <textarea class="form-control" id="aiBaseUrl" rows="2" placeholder="支持多个 URL，用逗号或换行分隔（主线路, 备用线路）"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="saveSettingsBtn">保存并重载</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 规则编辑器 -->
+    <div class="modal fade" id="ruleEditorModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">规则编辑器</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label" for="rule_editor_id">规则 ID</label>
+                            <input type="text" class="form-control" id="rule_editor_id" readonly>
+                        </div>
+                        <div class="col-md-9">
+                            <label class="form-label" for="rule_editor_title">规则说明</label>
+                            <input type="text" class="form-control" id="rule_editor_title" readonly>
+                        </div>
+                    </div>
+                    <ul class="nav nav-tabs" role="tablist">
+                        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabBasic">基础</button></li>
+                        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabKeywords">关键词</button></li>
+                        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabMedia">媒体</button></li>
+                        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabAI">AI</button></li>
+                        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabStyle">修饰</button></li>
+                        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabOps">运维</button></li>
+                    </ul>
+                    <div class="tab-content pt-3">
+                        <div class="tab-pane fade show active" id="tabBasic">
+                            <div class="section-card">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label" for="rule_source_chat_id">Source Channel ID</label>
+                                        <input type="text" class="form-control" id="rule_source_chat_id">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label" for="rule_target_chat_id">Target Channel ID</label>
+                                        <input type="text" class="form-control" id="rule_target_chat_id">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="rule_enable_rule">
+                                            <label class="form-check-label" for="rule_enable_rule">启用规则</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="rule_only_rss">
+                                            <label class="form-check-label" for="rule_only_rss">只转发到 RSS</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="rule_enable_sync">
+                                            <label class="form-check-label" for="rule_enable_sync">启用同步</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label" for="rule_use_bot">执行账号</label>
+                                        <select class="form-select" id="rule_use_bot">
+                                            <option value="true">机器人</option>
+                                            <option value="false">用户账号</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label" for="rule_handle_mode">处理模式</label>
+                                        <select class="form-select" id="rule_handle_mode">
+                                            <option value="FORWARD">转发</option>
+                                            <option value="EDIT">编辑</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label" for="rule_message_mode">消息格式</label>
+                                        <select class="form-select" id="rule_message_mode">
+                                            <option value="Markdown">Markdown</option>
+                                            <option value="HTML">HTML</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label" for="rule_preview_mode">预览模式</label>
+                                        <select class="form-select" id="rule_preview_mode">
+                                            <option value="follow">跟随原消息</option>
+                                            <option value="on">强制开启</option>
+                                            <option value="off">强制关闭</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="tabKeywords">
+                            <div class="section-card">
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label" for="forward_mode">转发模式</label>
+                                        <select class="form-select" id="forward_mode">
+                                            <option value="whitelist">仅白名单</option>
+                                            <option value="blacklist">仅黑名单</option>
+                                            <option value="whitelist_then_blacklist">先白后黑</option>
+                                            <option value="blacklist_then_whitelist">先黑后白</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label" for="add_mode">关键词添加模式</label>
+                                        <select class="form-select" id="add_mode">
+                                            <option value="blacklist">黑名单</option>
+                                            <option value="whitelist">白名单</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="is_filter_user_info">
+                                            <label class="form-check-label" for="is_filter_user_info">过滤时附带发送者信息</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="enable_reverse_blacklist">
+                                            <label class="form-check-label" for="enable_reverse_blacklist">反转黑名单</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="enable_reverse_whitelist">
+                                            <label class="form-check-label" for="enable_reverse_whitelist">反转白名单</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="is_replace">
+                                            <label class="form-check-label" for="is_replace">启用替换模式</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="section-card">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label" for="keyword_blacklist">黑名单关键词</label>
+                                        <textarea class="form-control" id="keyword_blacklist" rows="3"></textarea>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label" for="keyword_whitelist">白名单关键词</label>
+                                        <textarea class="form-control" id="keyword_whitelist" rows="3"></textarea>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label" for="keyword_blacklist_regex">黑名单正则</label>
+                                        <textarea class="form-control" id="keyword_blacklist_regex" rows="3"></textarea>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label" for="keyword_whitelist_regex">白名单正则</label>
+                                        <textarea class="form-control" id="keyword_whitelist_regex" rows="3"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="section-card">
+                                <h6>正则替换</h6>
+                                <div id="replaceRulesList"></div>
+                                <button class="btn btn-outline-light btn-sm" type="button" onclick="addReplaceRuleRow()">
+                                    <i class="bi bi-plus-circle"></i> 添加替换规则
+                                </button>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="tabMedia">
+                            <div class="section-card">
+                                <div class="row g-3 align-items-center">
+                                    <div class="col-md-4">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="enable_media_type_filter">
+                                            <label class="form-check-label" for="enable_media_type_filter">启用媒体类型过滤</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label" for="media_type_filter_mode">模式</label>
+                                        <select class="form-select" id="media_type_filter_mode">
+                                            <option value="whitelist">白名单</option>
+                                            <option value="blacklist">黑名单</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="media_allow_text">
+                                            <label class="form-check-label" for="media_allow_text">放行文本</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="row g-3">
+                                            <div class="col-md-2">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="media_type_photo">
+                                                    <label class="form-check-label" for="media_type_photo">图片</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="media_type_document">
+                                                    <label class="form-check-label" for="media_type_document">文件</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="media_type_video">
+                                                    <label class="form-check-label" for="media_type_video">视频</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="media_type_audio">
+                                                    <label class="form-check-label" for="media_type_audio">音频</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="media_type_voice">
+                                                    <label class="form-check-label" for="media_type_voice">语音</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="media_type_text">
+                                                    <label class="form-check-label" for="media_type_text">文本</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="section-card">
+                                <div class="row g-3 align-items-center">
+                                    <div class="col-md-4">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="enable_media_size_filter">
+                                            <label class="form-check-label" for="enable_media_size_filter">启用大小过滤</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label" for="max_media_size">阈值 (MB)</label>
+                                        <input type="number" class="form-control" id="max_media_size" min="0" step="1">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label" for="media_size_filter_mode">过滤条件</label>
+                                        <select class="form-select" id="media_size_filter_mode">
+                                            <option value="less">大于拦截</option>
+                                            <option value="greater">小于拦截</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="is_send_over_media_size_message">
+                                            <label class="form-check-label" for="is_send_over_media_size_message">超限提示</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="section-card">
+                                <div class="row g-3 align-items-center">
+                                    <div class="col-md-4">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="enable_media_duration_filter">
+                                            <label class="form-check-label" for="enable_media_duration_filter">启用时长过滤</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label" for="media_duration_minutes">阈值 (分钟)</label>
+                                        <input type="number" class="form-control" id="media_duration_minutes" min="0" step="1">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label" for="media_duration_filter_mode">过滤条件</label>
+                                        <select class="form-select" id="media_duration_filter_mode">
+                                            <option value="less">大于拦截</option>
+                                            <option value="greater">小于拦截</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="section-card">
+                                <div class="row g-3 align-items-center">
+                                    <div class="col-md-4">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="enable_extension_filter">
+                                            <label class="form-check-label" for="enable_extension_filter">启用扩展名过滤</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label" for="extension_filter_mode">模式</label>
+                                        <select class="form-select" id="extension_filter_mode">
+                                            <option value="whitelist">白名单</option>
+                                            <option value="blacklist">黑名单</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label" for="media_extensions">扩展名列表</label>
+                                        <textarea class="form-control" id="media_extensions" rows="2"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="tabAI">
+                            <div class="section-card">
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="rule_is_ai">
+                                            <label class="form-check-label" for="rule_is_ai">启用 AI 处理</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label" for="rule_ai_model">模型</label>
+                                        <select class="form-select" id="rule_ai_model">
+                                            <option value="">默认</option>
+                                            {% for model in ai_models %}
+                                            <option value="{{ model }}">{{ model }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="rule_ai_upload_image">
+                                            <label class="form-check-label" for="rule_ai_upload_image">允许上传图片</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="rule_ai_keyword_after">
+                                            <label class="form-check-label" for="rule_ai_keyword_after">AI 后再次过滤</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label" for="rule_ai_prompt">提示词</label>
+                                        <textarea class="form-control" id="rule_ai_prompt" rows="4"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="section-card">
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="rule_ai_summary">
+                                            <label class="form-check-label" for="rule_ai_summary">启用总结</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label" for="rule_summary_time">总结时间</label>
+                                        <select class="form-select" id="rule_summary_time">
+                                            <option value="">默认</option>
+                                            {% for item in summary_times %}
+                                            <option value="{{ item }}">{{ item }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="rule_top_summary">
+                                            <label class="form-check-label" for="rule_top_summary">顶置总结消息</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label" for="rule_summary_prompt">总结提示词</label>
+                                        <textarea class="form-control" id="rule_summary_prompt" rows="3"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="tabStyle">
+                            <div class="section-card">
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="rule_show_sender">
+                                            <label class="form-check-label" for="rule_show_sender">显示发送者</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="rule_show_time">
+                                            <label class="form-check-label" for="rule_show_time">显示发送时间</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="rule_show_link">
+                                            <label class="form-check-label" for="rule_show_link">显示原始链接</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="rule_comment_button">
+                                            <label class="form-check-label" for="rule_comment_button">评论区按钮</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="rule_delete_original">
+                                            <label class="form-check-label" for="rule_delete_original">删除原消息</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="section-card">
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label" for="rule_userinfo_template">用户信息模板</label>
+                                        <textarea class="form-control" id="rule_userinfo_template" rows="3"></textarea>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label" for="rule_time_template">时间模板</label>
+                                        <textarea class="form-control" id="rule_time_template" rows="3"></textarea>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label" for="rule_link_template">原始链接模板</label>
+                                        <textarea class="form-control" id="rule_link_template" rows="3"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="tabOps">
+                            <div class="section-card">
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="rule_enable_push">
+                                            <label class="form-check-label" for="rule_enable_push">启用推送</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="rule_enable_only_push">
+                                            <label class="form-check-label" for="rule_enable_only_push">只推送</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mt-3" id="pushConfigsList"></div>
+                                <button class="btn btn-outline-light btn-sm" type="button" onclick="addPushConfigRow()">
+                                    <i class="bi bi-plus-circle"></i> 添加推送配置
+                                </button>
+                            </div>
+                            <div class="section-card">
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="rule_is_ufb">
+                                            <label class="form-check-label" for="rule_is_ufb">启用 UFB 同步</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label" for="rule_ufb_domain">UFB 域名</label>
+                                        <input type="text" class="form-control" id="rule_ufb_domain">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label" for="rule_ufb_item">UFB 项目</label>
+                                        <select class="form-select" id="rule_ufb_item">
+                                            <option value="main">main</option>
+                                            <option value="content">content</option>
+                                            <option value="main_username">main_username</option>
+                                            <option value="content_username">content_username</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="section-card">
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="rule_enable_delay">
+                                            <label class="form-check-label" for="rule_enable_delay">启用延迟</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label" for="rule_delay_seconds">延迟秒数</label>
+                                        <input type="number" class="form-control" id="rule_delay_seconds" min="0" step="1">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="section-card">
+                                <div class="row g-3">
+                                    <div class="col-md-3">
+                                        <label class="form-label" for="backfill_mode">回填模式</label>
+                                        <select class="form-select" id="backfill_mode">
+                                            <option value="last">最近 N 条</option>
+                                            <option value="range">时间范围</option>
+                                            <option value="all">全部</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3" id="backfill_limit_group">
+                                        <label class="form-label" for="backfill_limit">数量</label>
+                                        <input type="number" class="form-control" id="backfill_limit" min="1" step="1">
+                                    </div>
+                                    <div class="col-md-3" id="backfill_start_group" style="display: none;">
+                                        <label class="form-label" for="backfill_start">开始时间</label>
+                                        <input type="text" class="form-control" id="backfill_start" placeholder="2025-01-01 00:00">
+                                    </div>
+                                    <div class="col-md-3" id="backfill_end_group" style="display: none;">
+                                        <label class="form-label" for="backfill_end">结束时间</label>
+                                        <input type="text" class="form-control" id="backfill_end" placeholder="2025-01-02 23:59">
+                                    </div>
+                                </div>
+                                <button class="btn btn-outline-light btn-sm mt-3" type="button" onclick="startRuleBackfill()">
+                                    <i class="bi bi-clock-history"></i> 开始回填
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="saveRuleDetail()">保存规则</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 发送测试 -->
+    <div class="modal fade" id="sendTestModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">发送测试消息</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label" for="botTestTarget">发送目标</label>
+                        <select class="form-select" id="botTestTarget">
+                            <option value="me">收藏夹</option>
+                            <option value="chat_id">指定 Chat ID</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="botChatIdGroup" style="display: none;">
+                        <label class="form-label" for="botTestChatId">Chat ID</label>
+                        <input type="text" class="form-control" id="botTestChatId">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="botTestMessage">消息内容</label>
+                        <textarea class="form-control" id="botTestMessage" rows="4">Hello via Web</textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="sendBotTestBtn">发送</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.6.8/dist/axios.min.js"></script>
+    <script src="/static/js/api.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.5/dist/sweetalert2.min.js"></script>
+    <script>
+        const rules = (() => {
+            try {
+                return JSON.parse('{{ rules|tojson }}') || [];
+            } catch (error) {
+                return [];
+            }
+        })();
+        const rssConfigs = (() => {
+            try {
+                return JSON.parse('{{ rss_configs|tojson }}') || [];
+            } catch (error) {
+                return [];
+            }
+        })();
+
+        const rssConfigMap = {};
+        rssConfigs.forEach((config) => {
+            rssConfigMap[config.rule_id] = config;
+        });
+
+        const ruleCache = {};
+        let currentRuleId = null;
+        let isCreating = false;
+        let logLines = [];
+        let logTimer = null;
+        let logAutoScroll = true;
+
+        function showToast(message, type = 'success') {
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: type,
+                title: message,
+                showConfirmButton: false,
+                timer: 2200,
+                timerProgressBar: true,
+                background: '#101826',
+                color: '#e6edf3'
+            });
+        }
+
+        function initAxiosInterceptors() {
+            if (window.__apiInterceptorsInitialized) {
+                return;
+            }
+            window.__apiInterceptorsInitialized = true;
+            axios.interceptors.request.use((config) => {
+                const token = localStorage.getItem('auth_token');
+                if (token) {
+                    config.headers = config.headers || {};
+                    config.headers.Authorization = `Bearer ${token}`;
+                }
+                return config;
+            });
+            axios.interceptors.response.use(
+                (response) => response,
+                (error) => {
+                    if (error.response && error.response.status === 401) {
+                        localStorage.removeItem('auth_token');
+                        window.location.href = '/login';
+                    }
+                    return Promise.reject(error);
+                }
+            );
+        }
+
+        function updateCounts() {
+            document.getElementById('rssCount').textContent = rssConfigs.length;
+        }
+
+        function updateBotStatus(data) {
+            const online = data && data.status === 'online';
+            document.getElementById('navBotDot').classList.toggle('offline', !online);
+            document.getElementById('navBotPing').textContent = online && data.ping_ms !== null ? `${data.ping_ms} ms` : '-- ms';
+            document.getElementById('botUsername').textContent = data.username || '--';
+            document.getElementById('botId').textContent = data.id || '--';
+            document.getElementById('botPing').textContent = data.ping_ms !== null ? data.ping_ms : '--';
+            document.getElementById('botSessionType').textContent = data.session_type || '--';
+            document.getElementById('botDcId').textContent = data.dc_id || '--';
+            document.getElementById('botLastReconnect').textContent = data.last_reconnect_at || '--';
+            document.getElementById('botMsgCount').textContent = data.messages_processed || 0;
+        }
+
+        async function fetchBotStatus() {
+            try {
+                const response = await axios.get('/api/bot/status');
+                updateBotStatus(response.data || {});
+            } catch (error) {
+                updateBotStatus({ status: 'offline' });
+            }
+        }
+
+        function updateSystemStatus(data) {
+            document.getElementById('systemCpu').textContent = data.cpu_percent !== undefined ? data.cpu_percent : '--';
+            document.getElementById('systemMem').textContent = data.memory_percent !== undefined ? data.memory_percent : '--';
+            document.getElementById('systemUptime').textContent = data.uptime || '--';
+        }
+
+        function updateForwardingStatus(data) {
+            const ruleCountEl = document.getElementById('ruleCount');
+            if (ruleCountEl) {
+                ruleCountEl.textContent = data.active_rules_count || 0;
+            }
+        }
+
+        async function fetchSystemStatus() {
+            try {
+                const [systemResponse, forwardingResponse] = await Promise.all([
+                    axios.get('/api/system/status'),
+                    axios.get('/api/system/forwarding')
+                ]);
+                updateSystemStatus(systemResponse.data || {});
+                updateForwardingStatus(forwardingResponse.data || {});
+            } catch (error) {
+                updateSystemStatus({});
+                updateForwardingStatus({});
+            }
+        }
+
+        function parseLogLevel(line) {
+            if (line.includes('ERROR')) return 'ERROR';
+            if (line.includes('WARNING')) return 'WARNING';
+            if (line.includes('INFO')) return 'INFO';
+            if (line.includes('DEBUG')) return 'DEBUG';
+            return 'INFO';
+        }
+
+        function renderLogs() {
+            const logBody = document.getElementById('logBody');
+            if (!logBody) return;
+            const keyword = document.getElementById('logSearch').value.trim().toLowerCase();
+            const level = document.getElementById('logLevel').value;
+            logBody.innerHTML = '';
+
+            const filtered = logLines.filter((line) => {
+                const matchesKeyword = !keyword || line.toLowerCase().includes(keyword);
+                const lineLevel = parseLogLevel(line);
+                const matchesLevel = level === 'ALL' || lineLevel === level;
+                return matchesKeyword && matchesLevel;
+            });
+
+            filtered.forEach((line) => {
+                const div = document.createElement('div');
+                const levelClass = parseLogLevel(line).toLowerCase();
+                div.className = `log-line log-${levelClass}`;
+                div.textContent = line;
+                logBody.appendChild(div);
+            });
+
+            if (logAutoScroll) {
+                logBody.scrollTop = logBody.scrollHeight;
+            }
+        }
+
+        async function fetchLogs() {
+            try {
+                const response = await axios.get('/api/logs?limit=200');
+                const data = response.data || {};
+                logLines = data.lines || [];
+                renderLogs();
+            } catch (error) {
+                logLines = ['无法加载日志'];
+                renderLogs();
+            }
+        }
+
+        function startLogPolling() {
+            if (logTimer) return;
+            fetchLogs();
+            logTimer = setInterval(fetchLogs, 4000);
+        }
+
+        function stopLogPolling() {
+            if (logTimer) {
+                clearInterval(logTimer);
+                logTimer = null;
+            }
+        }
+
+        function updateRuleCard(ruleId, detail) {
+            const dot = document.getElementById(`rule-dot-${ruleId}`);
+            const status = document.getElementById(`rule-status-${ruleId}`);
+            const toggle = document.getElementById(`rule-toggle-${ruleId}`);
+            if (!dot || !status || !toggle) return;
+            const enabled = !!(detail.basic && detail.basic.enable_rule);
+            dot.classList.toggle('offline', !enabled);
+            status.textContent = enabled ? '已启用' : '已停用';
+            toggle.textContent = enabled ? '停用' : '启用';
+        }
+
+        async function refreshRuleCard(ruleId) {
+            try {
+                const response = await axios.get(`/rss/rules/${ruleId}`);
+                if (response.data && response.data.rule) {
+                    ruleCache[ruleId] = response.data.rule;
+                    updateRuleCard(ruleId, response.data.rule);
+                }
+            } catch (error) {
+                return;
+            }
+        }
+
+        async function toggleRule(ruleId) {
+            const id = parseInt(ruleId, 10);
+            if (!id) return;
+            if (!ruleCache[id]) {
+                await refreshRuleCard(id);
+            }
+            const current = ruleCache[id] && ruleCache[id].basic ? !!ruleCache[id].basic.enable_rule : false;
+            try {
+                const response = await axios.put(`/rss/rules/${id}`, { basic: { enable_rule: !current } });
+                if (response.data && response.data.success) {
+                    if (!ruleCache[id]) {
+                        ruleCache[id] = { basic: {} };
+                    }
+                    ruleCache[id].basic.enable_rule = !current;
+                    updateRuleCard(id, ruleCache[id]);
+                    showToast(!current ? '规则已启用' : '规则已停用');
+                } else {
+                    showToast(response.data.message || '切换失败', 'error');
+                }
+            } catch (error) {
+                showToast('切换失败', 'error');
+            }
+        }
+
+        function deleteRule(ruleId) {
+            const id = parseInt(ruleId, 10);
+            if (!id) return;
+            Swal.fire({
+                title: '确认删除？',
+                text: '将删除该规则的 RSS 配置。',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: '删除',
+                cancelButtonText: '取消'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = `/rss/delete/${id}`;
+                }
+            });
+        }
+
+        function resetFilterForm() {
+            document.getElementById('forward_mode').value = 'blacklist';
+            document.getElementById('add_mode').value = 'blacklist';
+            document.getElementById('enable_reverse_blacklist').checked = false;
+            document.getElementById('enable_reverse_whitelist').checked = false;
+            document.getElementById('is_filter_user_info').checked = false;
+            document.getElementById('is_replace').checked = false;
+            document.getElementById('keyword_blacklist').value = '';
+            document.getElementById('keyword_blacklist_regex').value = '';
+            document.getElementById('keyword_whitelist').value = '';
+            document.getElementById('keyword_whitelist_regex').value = '';
+
+            document.getElementById('enable_media_type_filter').checked = false;
+            document.getElementById('media_type_filter_mode').value = 'whitelist';
+            document.getElementById('media_type_photo').checked = false;
+            document.getElementById('media_type_document').checked = false;
+            document.getElementById('media_type_video').checked = false;
+            document.getElementById('media_type_audio').checked = false;
+            document.getElementById('media_type_voice').checked = false;
+            document.getElementById('media_type_text').checked = false;
+            document.getElementById('media_allow_text').checked = false;
+
+            document.getElementById('enable_media_size_filter').checked = false;
+            document.getElementById('max_media_size').value = '';
+            document.getElementById('media_size_filter_mode').value = 'less';
+            document.getElementById('is_send_over_media_size_message').checked = true;
+
+            document.getElementById('enable_media_duration_filter').checked = false;
+            document.getElementById('media_duration_minutes').value = '';
+            document.getElementById('media_duration_filter_mode').value = 'less';
+
+            document.getElementById('enable_extension_filter').checked = false;
+            document.getElementById('extension_filter_mode').value = 'whitelist';
+            document.getElementById('media_extensions').value = '';
+        }
+
+        function normalizeLines(value) {
+            if (!value) return [];
+            return value.split(/\n+/).map((item) => item.trim()).filter(Boolean);
+        }
+
+        function applyFilterSettings(filters) {
+            if (!filters) {
+                resetFilterForm();
+                return;
+            }
+            document.getElementById('forward_mode').value = filters.forward_mode || 'blacklist';
+            document.getElementById('add_mode').value = filters.add_mode || 'blacklist';
+            document.getElementById('enable_reverse_blacklist').checked = !!filters.enable_reverse_blacklist;
+            document.getElementById('enable_reverse_whitelist').checked = !!filters.enable_reverse_whitelist;
+            document.getElementById('is_filter_user_info').checked = !!filters.is_filter_user_info;
+            document.getElementById('is_replace').checked = !!filters.is_replace;
+            document.getElementById('keyword_blacklist').value = (filters.keyword_blacklist || []).join('\n');
+            document.getElementById('keyword_blacklist_regex').value = (filters.keyword_blacklist_regex || []).join('\n');
+            document.getElementById('keyword_whitelist').value = (filters.keyword_whitelist || []).join('\n');
+            document.getElementById('keyword_whitelist_regex').value = (filters.keyword_whitelist_regex || []).join('\n');
+
+            document.getElementById('enable_media_type_filter').checked = !!filters.enable_media_type_filter;
+            document.getElementById('media_type_filter_mode').value = filters.media_type_filter_mode || 'whitelist';
+            const mediaTypes = filters.media_types || {};
+            document.getElementById('media_type_photo').checked = !!mediaTypes.photo;
+            document.getElementById('media_type_document').checked = !!mediaTypes.document;
+            document.getElementById('media_type_video').checked = !!mediaTypes.video;
+            document.getElementById('media_type_audio').checked = !!mediaTypes.audio;
+            document.getElementById('media_type_voice').checked = !!mediaTypes.voice;
+            document.getElementById('media_type_text').checked = !!mediaTypes.text;
+            document.getElementById('media_allow_text').checked = !!filters.media_allow_text;
+
+            document.getElementById('enable_media_size_filter').checked = !!filters.enable_media_size_filter;
+            document.getElementById('max_media_size').value = filters.max_media_size !== undefined ? filters.max_media_size : '';
+            document.getElementById('media_size_filter_mode').value = filters.media_size_filter_mode || 'less';
+            document.getElementById('is_send_over_media_size_message').checked = !!filters.is_send_over_media_size_message;
+
+            document.getElementById('enable_media_duration_filter').checked = !!filters.enable_media_duration_filter;
+            document.getElementById('media_duration_minutes').value = filters.media_duration_minutes !== undefined ? filters.media_duration_minutes : '';
+            document.getElementById('media_duration_filter_mode').value = filters.media_duration_filter_mode || 'less';
+
+            document.getElementById('enable_extension_filter').checked = !!filters.enable_extension_filter;
+            document.getElementById('extension_filter_mode').value = filters.extension_filter_mode || 'whitelist';
+            document.getElementById('media_extensions').value = (filters.media_extensions || []).join('\n');
+        }
+
+        function collectFilterPayload() {
+            return {
+                forward_mode: document.getElementById('forward_mode').value,
+                add_mode: document.getElementById('add_mode').value,
+                enable_reverse_blacklist: document.getElementById('enable_reverse_blacklist').checked,
+                enable_reverse_whitelist: document.getElementById('enable_reverse_whitelist').checked,
+                is_filter_user_info: document.getElementById('is_filter_user_info').checked,
+                is_replace: document.getElementById('is_replace').checked,
+                keyword_blacklist: normalizeLines(document.getElementById('keyword_blacklist').value),
+                keyword_blacklist_regex: normalizeLines(document.getElementById('keyword_blacklist_regex').value),
+                keyword_whitelist: normalizeLines(document.getElementById('keyword_whitelist').value),
+                keyword_whitelist_regex: normalizeLines(document.getElementById('keyword_whitelist_regex').value),
+                enable_media_type_filter: document.getElementById('enable_media_type_filter').checked,
+                media_type_filter_mode: document.getElementById('media_type_filter_mode').value,
+                media_types: {
+                    photo: document.getElementById('media_type_photo').checked,
+                    document: document.getElementById('media_type_document').checked,
+                    video: document.getElementById('media_type_video').checked,
+                    audio: document.getElementById('media_type_audio').checked,
+                    voice: document.getElementById('media_type_voice').checked,
+                    text: document.getElementById('media_type_text').checked
+                },
+                enable_media_size_filter: document.getElementById('enable_media_size_filter').checked,
+                max_media_size: parseInt(document.getElementById('max_media_size').value, 10) || 0,
+                media_size_filter_mode: document.getElementById('media_size_filter_mode').value,
+                is_send_over_media_size_message: document.getElementById('is_send_over_media_size_message').checked,
+                enable_media_duration_filter: document.getElementById('enable_media_duration_filter').checked,
+                media_duration_minutes: parseInt(document.getElementById('media_duration_minutes').value, 10) || 0,
+                media_duration_filter_mode: document.getElementById('media_duration_filter_mode').value,
+                enable_extension_filter: document.getElementById('enable_extension_filter').checked,
+                extension_filter_mode: document.getElementById('extension_filter_mode').value,
+                media_extensions: normalizeLines(document.getElementById('media_extensions').value).map((item) => item.replace(/^\./, '').toLowerCase()),
+                media_allow_text: document.getElementById('media_allow_text').checked
+            };
+        }
+
+        function addReplaceRuleRow(pattern = '', content = '') {
+            const container = document.getElementById('replaceRulesList');
+            if (!container) return;
+            const row = document.createElement('div');
+            row.className = 'replace-rule-row';
+            row.innerHTML = `
+                <div class="row g-2 align-items-center">
+                    <div class="col-md-5">
+                        <input type="text" class="form-control form-control-sm replace-pattern" placeholder="正则表达式">
+                    </div>
+                    <div class="col-md-5">
+                        <input type="text" class="form-control form-control-sm replace-content" placeholder="替换为">
+                    </div>
+                    <div class="col-md-2 text-end">
+                        <button type="button" class="btn btn-outline-light btn-sm remove-replace-rule">删除</button>
+                    </div>
+                </div>
+            `;
+            row.querySelector('.replace-pattern').value = pattern || '';
+            row.querySelector('.replace-content').value = content || '';
+            row.querySelector('.remove-replace-rule').addEventListener('click', () => row.remove());
+            container.appendChild(row);
+        }
+
+        function setReplaceRules(items) {
+            const container = document.getElementById('replaceRulesList');
+            if (!container) return;
+            container.innerHTML = '';
+            (items || []).forEach((item) => addReplaceRuleRow(item.pattern || '', item.content || ''));
+        }
+
+        function collectReplaceRules() {
+            const rows = document.querySelectorAll('#replaceRulesList .replace-rule-row');
+            const results = [];
+            rows.forEach((row) => {
+                const pattern = row.querySelector('.replace-pattern').value.trim();
+                const content = row.querySelector('.replace-content').value.trim();
+                if (!pattern) return;
+                results.push({ pattern, content });
+            });
+            return results;
+        }
+
+        function addPushConfigRow(data = {}) {
+            const container = document.getElementById('pushConfigsList');
+            if (!container) return;
+            const row = document.createElement('div');
+            row.className = 'push-config-row';
+            row.innerHTML = `
+                <div class="row g-2 align-items-center">
+                    <div class="col-md-5">
+                        <input type="text" class="form-control form-control-sm push-channel" placeholder="Apprise 目标">
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select form-select-sm push-mode">
+                            <option value="Single">单个</option>
+                            <option value="Multiple">全部</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input push-enabled" type="checkbox">
+                            <label class="form-check-label">启用</label>
+                        </div>
+                    </div>
+                    <div class="col-md-2 text-end">
+                        <button type="button" class="btn btn-outline-light btn-sm remove-push-config">删除</button>
+                    </div>
+                </div>
+            `;
+            row.querySelector('.push-channel').value = data.push_channel || '';
+            row.querySelector('.push-mode').value = data.media_send_mode || 'Single';
+            row.querySelector('.push-enabled').checked = data.enable_push_channel !== undefined ? !!data.enable_push_channel : true;
+            row.querySelector('.remove-push-config').addEventListener('click', () => row.remove());
+            container.appendChild(row);
+        }
+
+        function setPushConfigs(items) {
+            const container = document.getElementById('pushConfigsList');
+            if (!container) return;
+            container.innerHTML = '';
+            (items || []).forEach((item) => addPushConfigRow(item));
+        }
+
+        function collectPushConfigs() {
+            const rows = document.querySelectorAll('#pushConfigsList .push-config-row');
+            const results = [];
+            rows.forEach((row) => {
+                const pushChannel = row.querySelector('.push-channel').value.trim();
+                if (!pushChannel) return;
+                results.push({
+                    push_channel: pushChannel,
+                    media_send_mode: row.querySelector('.push-mode').value || 'Single',
+                    enable_push_channel: row.querySelector('.push-enabled').checked
+                });
+            });
+            return results;
+        }
+
+        function buildRulePayload() {
+            const filterPayload = collectFilterPayload();
+            return {
+                basic: {
+                    enable_rule: document.getElementById('rule_enable_rule').checked,
+                    use_bot: document.getElementById('rule_use_bot').value === 'true',
+                    handle_mode: document.getElementById('rule_handle_mode').value,
+                    message_mode: document.getElementById('rule_message_mode').value,
+                    is_preview: document.getElementById('rule_preview_mode').value,
+                    only_rss: document.getElementById('rule_only_rss').checked,
+                    enable_push: document.getElementById('rule_enable_push').checked,
+                    enable_only_push: document.getElementById('rule_enable_only_push').checked,
+                    enable_sync: document.getElementById('rule_enable_sync').checked,
+                    source_chat_id: document.getElementById('rule_source_chat_id').value.trim(),
+                    target_chat_id: document.getElementById('rule_target_chat_id').value.trim()
+                },
+                keywords: {
+                    forward_mode: filterPayload.forward_mode,
+                    add_mode: filterPayload.add_mode,
+                    enable_reverse_blacklist: filterPayload.enable_reverse_blacklist,
+                    enable_reverse_whitelist: filterPayload.enable_reverse_whitelist,
+                    is_filter_user_info: filterPayload.is_filter_user_info,
+                    blacklist: filterPayload.keyword_blacklist,
+                    blacklist_regex: filterPayload.keyword_blacklist_regex,
+                    whitelist: filterPayload.keyword_whitelist,
+                    whitelist_regex: filterPayload.keyword_whitelist_regex,
+                    is_replace: filterPayload.is_replace
+                },
+                media_filters: {
+                    enable_media_type_filter: filterPayload.enable_media_type_filter,
+                    media_type_filter_mode: filterPayload.media_type_filter_mode,
+                    media_types: filterPayload.media_types,
+                    enable_media_size_filter: filterPayload.enable_media_size_filter,
+                    max_media_size: filterPayload.max_media_size,
+                    media_size_filter_mode: filterPayload.media_size_filter_mode,
+                    is_send_over_media_size_message: filterPayload.is_send_over_media_size_message,
+                    enable_media_duration_filter: filterPayload.enable_media_duration_filter,
+                    media_duration_minutes: filterPayload.media_duration_minutes,
+                    media_duration_filter_mode: filterPayload.media_duration_filter_mode,
+                    enable_extension_filter: filterPayload.enable_extension_filter,
+                    extension_filter_mode: filterPayload.extension_filter_mode,
+                    media_extensions: filterPayload.media_extensions,
+                    media_allow_text: filterPayload.media_allow_text
+                },
+                replace_rules: collectReplaceRules(),
+                push_configs: collectPushConfigs(),
+                ai: {
+                    is_ai: document.getElementById('rule_is_ai').checked,
+                    ai_model: document.getElementById('rule_ai_model').value,
+                    ai_prompt: document.getElementById('rule_ai_prompt').value.trim(),
+                    enable_ai_upload_image: document.getElementById('rule_ai_upload_image').checked,
+                    is_keyword_after_ai: document.getElementById('rule_ai_keyword_after').checked,
+                    is_summary: document.getElementById('rule_ai_summary').checked,
+                    summary_time: document.getElementById('rule_summary_time').value,
+                    summary_prompt: document.getElementById('rule_summary_prompt').value.trim(),
+                    is_top_summary: document.getElementById('rule_top_summary').checked
+                },
+                style: {
+                    is_original_sender: document.getElementById('rule_show_sender').checked,
+                    is_original_time: document.getElementById('rule_show_time').checked,
+                    is_original_link: document.getElementById('rule_show_link').checked,
+                    userinfo_template: document.getElementById('rule_userinfo_template').value.trim(),
+                    time_template: document.getElementById('rule_time_template').value.trim(),
+                    original_link_template: document.getElementById('rule_link_template').value.trim(),
+                    enable_comment_button: document.getElementById('rule_comment_button').checked,
+                    is_delete_original: document.getElementById('rule_delete_original').checked
+                },
+                advanced: {
+                    is_ufb: document.getElementById('rule_is_ufb').checked,
+                    ufb_domain: document.getElementById('rule_ufb_domain').value.trim(),
+                    ufb_item: document.getElementById('rule_ufb_item').value,
+                    enable_delay: document.getElementById('rule_enable_delay').checked,
+                    delay_seconds: parseInt(document.getElementById('rule_delay_seconds').value, 10) || 0
+                }
+            };
+        }
+
+        function normalizeList(items) {
+            return (items || []).map((item) => String(item || '').trim()).filter(Boolean).sort();
+        }
+
+        function normalizeExtensions(items) {
+            return normalizeList(items).map((item) => item.replace(/^\./, '').toLowerCase());
+        }
+
+        function extractFilterPayload(data) {
+            const rule = data.rule || {};
+            const keywords = rule.keywords || {};
+            const mediaFilters = rule.media_filters || {};
+            return {
+                forward_mode: keywords.forward_mode,
+                add_mode: keywords.add_mode,
+                enable_reverse_blacklist: !!keywords.enable_reverse_blacklist,
+                enable_reverse_whitelist: !!keywords.enable_reverse_whitelist,
+                is_filter_user_info: !!keywords.is_filter_user_info,
+                is_replace: !!keywords.is_replace,
+                keyword_blacklist: keywords.blacklist || [],
+                keyword_blacklist_regex: keywords.blacklist_regex || [],
+                keyword_whitelist: keywords.whitelist || [],
+                keyword_whitelist_regex: keywords.whitelist_regex || [],
+                enable_media_type_filter: !!mediaFilters.enable_media_type_filter,
+                media_type_filter_mode: mediaFilters.media_type_filter_mode,
+                media_types: mediaFilters.media_types || {},
+                enable_media_size_filter: !!mediaFilters.enable_media_size_filter,
+                max_media_size: mediaFilters.max_media_size || 0,
+                media_size_filter_mode: mediaFilters.media_size_filter_mode,
+                is_send_over_media_size_message: !!mediaFilters.is_send_over_media_size_message,
+                enable_media_duration_filter: !!mediaFilters.enable_media_duration_filter,
+                media_duration_minutes: mediaFilters.media_duration_minutes || 0,
+                media_duration_filter_mode: mediaFilters.media_duration_filter_mode,
+                enable_extension_filter: !!mediaFilters.enable_extension_filter,
+                extension_filter_mode: mediaFilters.extension_filter_mode,
+                media_extensions: mediaFilters.media_extensions || [],
+                media_allow_text: !!mediaFilters.media_allow_text
+            };
+        }
+
+        function normalizeFilterForCompare(filters) {
+            const mediaTypes = filters.media_types || {};
+            return {
+                forward_mode: filters.forward_mode || 'blacklist',
+                add_mode: filters.add_mode || 'blacklist',
+                enable_reverse_blacklist: !!filters.enable_reverse_blacklist,
+                enable_reverse_whitelist: !!filters.enable_reverse_whitelist,
+                is_filter_user_info: !!filters.is_filter_user_info,
+                is_replace: !!filters.is_replace,
+                keyword_blacklist: normalizeList(filters.keyword_blacklist),
+                keyword_blacklist_regex: normalizeList(filters.keyword_blacklist_regex),
+                keyword_whitelist: normalizeList(filters.keyword_whitelist),
+                keyword_whitelist_regex: normalizeList(filters.keyword_whitelist_regex),
+                enable_media_type_filter: !!filters.enable_media_type_filter,
+                media_type_filter_mode: filters.media_type_filter_mode || 'whitelist',
+                media_types: {
+                    photo: !!mediaTypes.photo,
+                    document: !!mediaTypes.document,
+                    video: !!mediaTypes.video,
+                    audio: !!mediaTypes.audio,
+                    voice: !!mediaTypes.voice,
+                    text: !!mediaTypes.text
+                },
+                enable_media_size_filter: !!filters.enable_media_size_filter,
+                max_media_size: parseInt(filters.max_media_size, 10) || 0,
+                media_size_filter_mode: filters.media_size_filter_mode || 'less',
+                is_send_over_media_size_message: !!filters.is_send_over_media_size_message,
+                enable_media_duration_filter: !!filters.enable_media_duration_filter,
+                media_duration_minutes: parseInt(filters.media_duration_minutes, 10) || 0,
+                media_duration_filter_mode: filters.media_duration_filter_mode || 'less',
+                enable_extension_filter: !!filters.enable_extension_filter,
+                extension_filter_mode: filters.extension_filter_mode || 'whitelist',
+                media_extensions: normalizeExtensions(filters.media_extensions),
+                media_allow_text: !!filters.media_allow_text
+            };
+        }
+
+        function compareFilters(expected, actual) {
+            return JSON.stringify(expected) === JSON.stringify(actual);
+        }
+
+        async function verifyFilterSettings(ruleId, expectedPayload) {
+            try {
+                const response = await axios.get(`/rss/rules/${ruleId}`);
+                const data = response.data || {};
+                if (!data.success) {
+                    return false;
+                }
+                const expected = normalizeFilterForCompare(expectedPayload);
+                const actual = normalizeFilterForCompare(extractFilterPayload(data));
+                return compareFilters(expected, actual);
+            } catch (error) {
+                return false;
+            }
+        }
+
+        function resetRuleEditorForm() {
+            resetFilterForm();
+            document.getElementById('rule_source_chat_id').value = '';
+            document.getElementById('rule_target_chat_id').value = '';
+            document.getElementById('rule_enable_rule').checked = true;
+            document.getElementById('rule_only_rss').checked = false;
+            document.getElementById('rule_enable_sync').checked = false;
+            document.getElementById('rule_use_bot').value = 'true';
+            document.getElementById('rule_handle_mode').value = 'FORWARD';
+            document.getElementById('rule_message_mode').value = 'Markdown';
+            document.getElementById('rule_preview_mode').value = 'follow';
+            document.getElementById('rule_enable_push').checked = false;
+            document.getElementById('rule_enable_only_push').checked = false;
+
+            document.getElementById('rule_is_ai').checked = false;
+            document.getElementById('rule_ai_model').value = '';
+            document.getElementById('rule_ai_prompt').value = '';
+            document.getElementById('rule_ai_upload_image').checked = false;
+            document.getElementById('rule_ai_keyword_after').checked = false;
+            document.getElementById('rule_ai_summary').checked = false;
+            document.getElementById('rule_summary_time').value = '';
+            document.getElementById('rule_summary_prompt').value = '';
+            document.getElementById('rule_top_summary').checked = true;
+
+            document.getElementById('rule_show_sender').checked = false;
+            document.getElementById('rule_show_time').checked = false;
+            document.getElementById('rule_show_link').checked = false;
+            document.getElementById('rule_comment_button').checked = false;
+            document.getElementById('rule_delete_original').checked = false;
+            document.getElementById('rule_userinfo_template').value = '';
+            document.getElementById('rule_time_template').value = '';
+            document.getElementById('rule_link_template').value = '';
+
+            document.getElementById('rule_is_ufb').checked = false;
+            document.getElementById('rule_ufb_domain').value = '';
+            document.getElementById('rule_ufb_item').value = 'main';
+            document.getElementById('rule_enable_delay').checked = false;
+            document.getElementById('rule_delay_seconds').value = '';
+
+            setReplaceRules([]);
+            setPushConfigs([]);
+        }
+
+        function applyRuleDetail(rule) {
+            if (!rule) {
+                resetRuleEditorForm();
+                return;
+            }
+            const basic = rule.basic || {};
+            const keywords = rule.keywords || {};
+            const mediaFilters = rule.media_filters || {};
+            const ai = rule.ai || {};
+            const style = rule.style || {};
+            const advanced = rule.advanced || {};
+
+            document.getElementById('rule_editor_id').value = rule.rule_id || currentRuleId || '';
+            const sourceLabel = basic.source_chat_name || basic.source_chat_id || '';
+            const targetLabel = basic.target_chat_name || basic.target_chat_id || '';
+            document.getElementById('rule_editor_title').value = sourceLabel && targetLabel ? `${sourceLabel} → ${targetLabel}` : '';
+
+            document.getElementById('rule_source_chat_id').value = basic.source_chat_id || '';
+            document.getElementById('rule_target_chat_id').value = basic.target_chat_id || '';
+            document.getElementById('rule_enable_rule').checked = !!basic.enable_rule;
+            document.getElementById('rule_only_rss').checked = !!basic.only_rss;
+            document.getElementById('rule_enable_sync').checked = !!basic.enable_sync;
+            document.getElementById('rule_use_bot').value = basic.use_bot ? 'true' : 'false';
+            document.getElementById('rule_handle_mode').value = basic.handle_mode || 'FORWARD';
+            document.getElementById('rule_message_mode').value = basic.message_mode || 'Markdown';
+            document.getElementById('rule_preview_mode').value = basic.is_preview || 'follow';
+            document.getElementById('rule_enable_push').checked = !!basic.enable_push;
+            document.getElementById('rule_enable_only_push').checked = !!basic.enable_only_push;
+
+            applyFilterSettings({
+                forward_mode: keywords.forward_mode,
+                add_mode: keywords.add_mode,
+                enable_reverse_blacklist: keywords.enable_reverse_blacklist,
+                enable_reverse_whitelist: keywords.enable_reverse_whitelist,
+                is_filter_user_info: keywords.is_filter_user_info,
+                is_replace: keywords.is_replace,
+                keyword_blacklist: keywords.blacklist || [],
+                keyword_blacklist_regex: keywords.blacklist_regex || [],
+                keyword_whitelist: keywords.whitelist || [],
+                keyword_whitelist_regex: keywords.whitelist_regex || [],
+                enable_media_type_filter: mediaFilters.enable_media_type_filter,
+                media_type_filter_mode: mediaFilters.media_type_filter_mode,
+                media_types: mediaFilters.media_types || {},
+                enable_media_size_filter: mediaFilters.enable_media_size_filter,
+                max_media_size: mediaFilters.max_media_size,
+                media_size_filter_mode: mediaFilters.media_size_filter_mode,
+                is_send_over_media_size_message: mediaFilters.is_send_over_media_size_message,
+                enable_media_duration_filter: mediaFilters.enable_media_duration_filter,
+                media_duration_minutes: mediaFilters.media_duration_minutes,
+                media_duration_filter_mode: mediaFilters.media_duration_filter_mode,
+                enable_extension_filter: mediaFilters.enable_extension_filter,
+                extension_filter_mode: mediaFilters.extension_filter_mode,
+                media_extensions: mediaFilters.media_extensions || [],
+                media_allow_text: mediaFilters.media_allow_text
+            });
+
+            setReplaceRules(rule.replace_rules || []);
+            setPushConfigs(rule.push_configs || []);
+
+            document.getElementById('rule_is_ai').checked = !!ai.is_ai;
+            document.getElementById('rule_ai_model').value = ai.ai_model || '';
+            document.getElementById('rule_ai_prompt').value = ai.ai_prompt || '';
+            document.getElementById('rule_ai_upload_image').checked = !!ai.enable_ai_upload_image;
+            document.getElementById('rule_ai_keyword_after').checked = !!ai.is_keyword_after_ai;
+            document.getElementById('rule_ai_summary').checked = !!ai.is_summary;
+            document.getElementById('rule_summary_time').value = ai.summary_time || '';
+            document.getElementById('rule_summary_prompt').value = ai.summary_prompt || '';
+            document.getElementById('rule_top_summary').checked = ai.is_top_summary !== undefined ? !!ai.is_top_summary : true;
+
+            document.getElementById('rule_show_sender').checked = !!style.is_original_sender;
+            document.getElementById('rule_show_time').checked = !!style.is_original_time;
+            document.getElementById('rule_show_link').checked = !!style.is_original_link;
+            document.getElementById('rule_comment_button').checked = !!style.enable_comment_button;
+            document.getElementById('rule_delete_original').checked = !!style.is_delete_original;
+            document.getElementById('rule_userinfo_template').value = style.userinfo_template || '';
+            document.getElementById('rule_time_template').value = style.time_template || '';
+            document.getElementById('rule_link_template').value = style.original_link_template || '';
+
+            document.getElementById('rule_is_ufb').checked = !!advanced.is_ufb;
+            document.getElementById('rule_ufb_domain').value = advanced.ufb_domain || '';
+            document.getElementById('rule_ufb_item').value = advanced.ufb_item || 'main';
+            document.getElementById('rule_enable_delay').checked = !!advanced.enable_delay;
+            document.getElementById('rule_delay_seconds').value = advanced.delay_seconds !== undefined ? advanced.delay_seconds : '';
+        }
+
+        async function loadRuleDetail(ruleId) {
+            try {
+                const response = await axios.get(`/rss/rules/${ruleId}`);
+                if (response.data && response.data.rule) {
+                    ruleCache[ruleId] = response.data.rule;
+                    applyRuleDetail(response.data.rule);
+                } else {
+                    showToast('加载规则失败', 'error');
+                }
+            } catch (error) {
+                showToast('加载规则失败', 'error');
+            }
+        }
+
+        function openRuleEditor(ruleId) {
+            const id = parseInt(ruleId, 10);
+            if (!id) return;
+            isCreating = false;
+            currentRuleId = id;
+            resetRuleEditorForm();
+            document.getElementById('rule_editor_id').value = id;
+            document.getElementById('rule_editor_title').value = '';
+            const modalTitle = document.querySelector('#ruleEditorModal .modal-title');
+            if (modalTitle) {
+                modalTitle.textContent = '编辑规则';
+            }
+            const modal = new bootstrap.Modal(document.getElementById('ruleEditorModal'));
+            modal.show();
+            loadRuleDetail(id);
+        }
+
+        async function saveRuleDetail() {
+            const payload = buildRulePayload();
+            if (isCreating) {
+                try {
+                    const response = await axios.post('/rss/rules', payload);
+                    if (response.data && response.data.success) {
+                        showToast('规则已创建');
+                        isCreating = false;
+                        currentRuleId = response.data.rule_id || null;
+                        const modalElement = document.getElementById('ruleEditorModal');
+                        const modalInstance = bootstrap.Modal.getInstance(modalElement);
+                        if (modalInstance) {
+                            modalInstance.hide();
+                        }
+                        window.location.reload();
+                    } else {
+                        showToast(response.data.message || '创建失败', 'error');
+                    }
+                } catch (error) {
+                    showToast('创建失败', 'error');
+                }
+                return;
+            }
+            if (!currentRuleId) {
+                showToast('请先选择规则', 'warning');
+                return;
+            }
+            try {
+                const response = await axios.put(`/rss/rules/${currentRuleId}`, payload);
+                if (response.data && response.data.success) {
+                    const verified = await verifyFilterSettings(currentRuleId, payload);
+                    if (verified) {
+                        showToast('保存成功且已校验');
+                    } else {
+                        showToast('配置可能未完整写入，请刷新重试', 'warning');
+                    }
+                    refreshRuleCard(currentRuleId);
+                } else {
+                    showToast(response.data.message || '保存失败', 'error');
+                }
+            } catch (error) {
+                showToast('保存失败', 'error');
+            }
+        }
+
+        function updateBackfillMode() {
+            const mode = document.getElementById('backfill_mode').value;
+            const limitGroup = document.getElementById('backfill_limit_group');
+            const startGroup = document.getElementById('backfill_start_group');
+            const endGroup = document.getElementById('backfill_end_group');
+            if (mode === 'range') {
+                limitGroup.style.display = 'none';
+                startGroup.style.display = 'block';
+                endGroup.style.display = 'block';
+            } else if (mode === 'all') {
+                limitGroup.style.display = 'none';
+                startGroup.style.display = 'none';
+                endGroup.style.display = 'none';
+            } else {
+                limitGroup.style.display = 'block';
+                startGroup.style.display = 'none';
+                endGroup.style.display = 'none';
+            }
+        }
+
+        async function startRuleBackfill() {
+            if (!currentRuleId) {
+                showToast('请先选择规则', 'warning');
+                return;
+            }
+            const mode = document.getElementById('backfill_mode').value;
+            const payload = { mode };
+            if (mode === 'last') {
+                const limitValue = parseInt(document.getElementById('backfill_limit').value, 10);
+                if (!limitValue) {
+                    showToast('请输入回填数量', 'warning');
+                    return;
+                }
+                payload.limit = limitValue;
+            } else if (mode === 'range') {
+                const startTime = document.getElementById('backfill_start').value.trim();
+                const endTime = document.getElementById('backfill_end').value.trim();
+                if (!startTime || !endTime) {
+                    showToast('请输入时间范围', 'warning');
+                    return;
+                }
+                payload.start_time = startTime;
+                payload.end_time = endTime;
+            }
+            try {
+                const response = await axios.post(`/api/rules/${currentRuleId}/backfill`, payload);
+                if (response.data && response.data.success) {
+                    showToast(response.data.message || '回填已启动');
+                } else {
+                    showToast(response.data.message || '回填失败', 'error');
+                }
+            } catch (error) {
+                showToast('回填失败', 'error');
+            }
+        }
+
+        function toggleModelInput(showInput) {
+            const selectGroup = document.getElementById('aiModelSelectGroup');
+            const inputGroup = document.getElementById('aiModelInputGroup');
+            const inputEl = document.getElementById('aiModelInput');
+            const selectEl = document.getElementById('aiModelSelect');
+            if (showInput) {
+                selectGroup.style.display = 'none';
+                inputGroup.style.display = 'flex';
+                inputEl.focus();
+                return;
+            }
+            inputGroup.style.display = 'none';
+            selectGroup.style.display = 'flex';
+            const val = inputEl.value.trim();
+            let matched = false;
+            if (val) {
+                Array.from(selectEl.options).forEach((opt) => {
+                    if (opt.value === val) {
+                        matched = true;
+                    }
+                });
+            }
+            selectEl.value = matched ? val : 'custom';
+        }
+
+        async function loadGlobalSettings() {
+            try {
+                const response = await axios.get('/api/config/global');
+                const data = response.data || {};
+                const telegram = data.telegram || {};
+                const aiService = data.ai_service || {};
+                const session = data.session || {};
+                document.getElementById('tgApiId').value = telegram.api_id || '';
+                document.getElementById('tgApiHash').value = telegram.api_hash || '';
+                document.getElementById('tgPhone').value = telegram.phone || '';
+                document.getElementById('tgBotToken').value = telegram.bot_token_set ? '******' : '';
+                document.getElementById('aiEnabled').checked = !!aiService.enabled;
+                document.getElementById('aiProvider').value = aiService.provider || 'openai';
+                const modelValue = aiService.model || '';
+                const modelInput = document.getElementById('aiModelInput');
+                const modelSelect = document.getElementById('aiModelSelect');
+                modelInput.value = modelValue;
+                modelSelect.innerHTML = '';
+                const placeholder = document.createElement('option');
+                placeholder.value = '';
+                placeholder.disabled = true;
+                placeholder.textContent = '请点击右侧按钮获取列表...';
+                modelSelect.appendChild(placeholder);
+
+                const customOption = document.createElement('option');
+                customOption.value = 'custom';
+                customOption.textContent = '✍️ 手动输入...';
+                modelSelect.appendChild(customOption);
+
+                if (modelValue && modelValue !== 'custom') {
+                    const currentOption = document.createElement('option');
+                    currentOption.value = modelValue;
+                    currentOption.textContent = `${modelValue} (当前)`;
+                    modelSelect.appendChild(currentOption);
+                    modelSelect.value = modelValue;
+                } else {
+                    modelSelect.value = '';
+                }
+                document.getElementById('aiBaseUrl').value = aiService.base_url || '';
+                document.getElementById('aiApiKey').value = aiService.api_key_set ? '******' : '';
+                document.getElementById('aiKeyStrategy').value = aiService.key_strategy || 'sequence';
+                document.getElementById('tgSessionInfo').textContent = `Session: user=${session.user_session_exists ? '已存在' : '无'} / bot=${session.bot_session_exists ? '已存在' : '无'}`;
+                toggleModelInput(false);
+            } catch (error) {
+                showToast('加载全局设置失败', 'error');
+            }
+        }
+
+        async function saveGlobalSettings() {
+            const telegram = {
+                api_id: document.getElementById('tgApiId').value.trim(),
+                api_hash: document.getElementById('tgApiHash').value.trim(),
+                phone: document.getElementById('tgPhone').value.trim()
+            };
+            const botTokenValue = document.getElementById('tgBotToken').value.trim();
+            if (botTokenValue) {
+                telegram.bot_token = botTokenValue;
+            }
+
+            const aiService = {
+                enabled: document.getElementById('aiEnabled').checked,
+                provider: document.getElementById('aiProvider').value,
+                model: document.getElementById('aiModelInput').value.trim(),
+                base_url: document.getElementById('aiBaseUrl').value.trim(),
+                key_strategy: document.getElementById('aiKeyStrategy').value
+            };
+            const apiKeyValue = document.getElementById('aiApiKey').value.trim();
+            if (apiKeyValue) {
+                aiService.api_key = apiKeyValue;
+            }
+
+            try {
+                const response = await axios.patch('/api/config/global', { telegram, ai_service: aiService });
+                if (response.data && response.data.success) {
+                    showToast('设置已更新，服务正在重载...');
+                    loadGlobalSettings();
+                } else {
+                    showToast('保存失败', 'error');
+                }
+            } catch (error) {
+                showToast('保存失败', 'error');
+            }
+        }
+
+        async function sendBotTest() {
+            const target = document.getElementById('botTestTarget').value;
+            const message = document.getElementById('botTestMessage').value.trim();
+            const chatId = document.getElementById('botTestChatId').value.trim();
+            const payload = { target, message };
+            if (target === 'chat_id') {
+                payload.chat_id = chatId;
+            }
+            try {
+                const response = await axios.post('/api/bot/send_test', payload);
+                if (response.data && response.data.success) {
+                    showToast('消息已发送');
+                } else {
+                    showToast('发送失败', 'error');
+                }
+            } catch (error) {
+                showToast('发送失败', 'error');
+            }
+        }
+
+        function filterRules() {
+            const keyword = document.getElementById('ruleSearch').value.trim().toLowerCase();
+            document.querySelectorAll('.rule-col').forEach((col) => {
+                const ruleId = col.getAttribute('data-rule-id') || '';
+                const text = col.textContent.toLowerCase();
+                if (!keyword || text.includes(keyword) || ruleId.includes(keyword)) {
+                    col.style.display = '';
+                } else {
+                    col.style.display = 'none';
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initAxiosInterceptors();
+            updateCounts();
+            fetchBotStatus();
+            fetchSystemStatus();
+            loadGlobalSettings();
+            rules.forEach((rule) => refreshRuleCard(rule.id));
+
+            setInterval(fetchBotStatus, 15000);
+            setInterval(fetchSystemStatus, 15000);
+
+            document.getElementById('ruleSearch').addEventListener('input', filterRules);
+            document.getElementById('logSearch').addEventListener('input', renderLogs);
+            document.getElementById('logLevel').addEventListener('change', renderLogs);
+            document.getElementById('logAutoScroll').addEventListener('change', (event) => {
+                logAutoScroll = event.target.checked;
+            });
+            document.getElementById('logCopy').addEventListener('click', () => {
+                navigator.clipboard.writeText(logLines.join('\n'));
+                showToast('日志已复制');
+            });
+            document.getElementById('logClear').addEventListener('click', () => {
+                logLines = [];
+                renderLogs();
+            });
+            document.getElementById('saveSettingsBtn').addEventListener('click', saveGlobalSettings);
+            document.getElementById('btnFetchModels').addEventListener('click', async () => {
+                const btn = document.getElementById('btnFetchModels');
+                const statusDiv = document.getElementById('modelFetchStatus');
+                const modelSelect = document.getElementById('aiModelSelect');
+                const modelInput = document.getElementById('aiModelInput');
+
+                const originalContent = btn.innerHTML;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+                btn.disabled = true;
+                statusDiv.textContent = '正在连接服务商...';
+                statusDiv.className = 'form-text text-muted';
+
+                try {
+                    const response = await axios.get('/api/ai/models');
+                    const data = response.data || {};
+                    const models = data.data || [];
+
+                    if (data.status === 'success') {
+                        modelSelect.innerHTML = '';
+                        const placeholder = document.createElement('option');
+                        placeholder.value = '';
+                        placeholder.disabled = true;
+                        placeholder.textContent = '请选择模型...';
+                        modelSelect.appendChild(placeholder);
+
+                        const customOption = document.createElement('option');
+                        customOption.value = 'custom';
+                        customOption.textContent = '✍️ 手动输入...';
+                        modelSelect.appendChild(customOption);
+
+                        models.forEach((modelId) => {
+                            const option = document.createElement('option');
+                            option.value = modelId;
+                            option.textContent = modelId;
+                            modelSelect.appendChild(option);
+                        });
+
+                        const currentValue = modelInput.value.trim();
+                        toggleModelInput(false);
+                        if (currentValue && models.includes(currentValue)) {
+                            modelSelect.value = currentValue;
+                        } else {
+                            modelSelect.value = '';
+                        }
+
+                        statusDiv.textContent = `成功获取 ${models.length} 个模型，请点击输入框选择。`;
+                        statusDiv.className = 'form-text text-success';
+                        showToast(`已更新 ${models.length} 个模型`);
+                        if (modelSelect.value && modelSelect.value !== 'custom') {
+                            modelSelect.focus();
+                        }
+                    } else {
+                        statusDiv.textContent = data.message || '拉取失败';
+                        statusDiv.className = 'form-text text-danger';
+                    }
+                } catch (error) {
+                    console.error('Fetch error:', error);
+                    statusDiv.textContent = '网络请求失败，请检查控制台日志';
+                    statusDiv.className = 'form-text text-danger';
+                    showToast('获取模型列表失败', 'error');
+                } finally {
+                    btn.innerHTML = originalContent;
+                    btn.disabled = false;
+                }
+            });
+            document.getElementById('aiModelSelect').addEventListener('change', (event) => {
+                if (event.target.value === 'custom') {
+                    toggleModelInput(true);
+                } else {
+                    document.getElementById('aiModelInput').value = event.target.value;
+                }
+            });
+            document.getElementById('aiProvider').addEventListener('change', (event) => {
+                const baseUrlInput = document.getElementById('aiBaseUrl');
+                if (!baseUrlInput.value) {
+                    if (event.target.value === 'deepseek') {
+                        baseUrlInput.value = 'https://api.deepseek.com';
+                    } else if (event.target.value === 'openai') {
+                        baseUrlInput.value = '';
+                    }
+                }
+            });
+            document.getElementById('sendBotTestBtn').addEventListener('click', sendBotTest);
+            document.getElementById('botTestTarget').addEventListener('change', (event) => {
+                document.getElementById('botChatIdGroup').style.display = event.target.value === 'chat_id' ? 'block' : 'none';
+            });
+            document.getElementById('backfill_mode').addEventListener('change', updateBackfillMode);
+            updateBackfillMode();
+
+            const logPanel = document.getElementById('logPanel');
+            logPanel.addEventListener('shown.bs.collapse', startLogPolling);
+            logPanel.addEventListener('hidden.bs.collapse', stopLogPolling);
+
+            document.getElementById('newRuleBtn').addEventListener('click', () => {
+                resetRuleEditorForm();
+                isCreating = true;
+                currentRuleId = null;
+                document.getElementById('rule_editor_id').value = '(自动生成)';
+                document.getElementById('rule_editor_title').value = '';
+                const modalTitle = document.querySelector('#ruleEditorModal .modal-title');
+                if (modalTitle) {
+                    modalTitle.textContent = '新建规则';
+                }
+                const modal = new bootstrap.Modal(document.getElementById('ruleEditorModal'));
+                modal.show();
+            });
+        });
+    </script>
+</body>
+</html>

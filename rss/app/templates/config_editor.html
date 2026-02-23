@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script>
+        (function() {
+            const token = localStorage.getItem('auth_token');
+            if (!token) {
+                window.location.href = '/login';
+            }
+        })();
+    </script>
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="/static/icons/apple-icon-180.png">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js');
+            });
+        }
+    </script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>系统配置 (System Config)</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jsoneditor/9.10.0/jsoneditor.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --glass-bg: rgba(255, 255, 255, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.4);
+            --shadow: 0 24px 60px rgba(15, 23, 42, 0.2);
+            --accent: #2563eb;
+            --accent-dark: #1d4ed8;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, sans-serif;
+            background: radial-gradient(circle at top left, #f5f7fb, #e7ebf3 35%, #dfe6f1 70%, #d7e1ef);
+            color: #0f172a;
+        }
+
+        .glass-card {
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+            gap: 16px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(18px);
+            box-shadow: var(--shadow);
+        }
+
+        .toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            letter-spacing: 0.2px;
+        }
+
+        .subtitle {
+            color: rgba(15, 23, 42, 0.6);
+            font-size: 0.95rem;
+            margin-left: 8px;
+        }
+
+        .actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn {
+            border: none;
+            border-radius: 999px;
+            padding: 8px 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+            color: #ffffff;
+            box-shadow: 0 12px 20px rgba(37, 99, 235, 0.25);
+        }
+
+        .btn-secondary {
+            background: rgba(15, 23, 42, 0.08);
+            color: #0f172a;
+        }
+
+        .btn-accent {
+            background: rgba(34, 197, 94, 0.12);
+            color: #166534;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .editor-wrap {
+            flex: 1 1 auto;
+            border-radius: 18px;
+            overflow: hidden;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        #jsonEditor {
+            height: calc(100vh - 140px);
+        }
+
+        .jsoneditor,
+        .jsoneditor-outer {
+            border: none;
+            background: rgba(15, 23, 42, 0.95);
+        }
+
+        .jsoneditor-menu {
+            background: rgba(15, 23, 42, 0.95);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .jsoneditor-statusbar {
+            background: rgba(15, 23, 42, 0.95);
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: rgba(15, 23, 42, 0.9);
+            color: #ffffff;
+            padding: 10px 18px;
+            border-radius: 999px;
+            opacity: 0;
+            transition: all 0.25s ease;
+            pointer-events: none;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .toast.success {
+            background: rgba(34, 197, 94, 0.9);
+        }
+
+        .toast.error {
+            background: rgba(239, 68, 68, 0.9);
+        }
+
+        @media (max-width: 768px) {
+            .glass-card {
+                padding: 16px;
+            }
+
+            .toolbar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .actions {
+                width: 100%;
+                justify-content: flex-start;
+                flex-wrap: wrap;
+            }
+
+            #jsonEditor {
+                height: calc(100vh - 200px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="glass-card">
+        <div class="toolbar">
+            <div class="title">系统配置 <span class="subtitle">System Config</span></div>
+            <div class="actions">
+                <button class="btn btn-primary" id="saveConfig">保存</button>
+                <button class="btn btn-secondary" id="resetConfig">重置</button>
+                <button class="btn btn-accent" id="reloadConfig">热重载</button>
+            </div>
+        </div>
+        <div class="editor-wrap">
+            <div id="jsonEditor"></div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.6.8/dist/axios.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsoneditor/9.10.0/jsoneditor.min.js"></script>
+    <script src="/static/js/api.js"></script>
+    <script>
+        const toast = document.getElementById('toast');
+        const saveBtn = document.getElementById('saveConfig');
+        const resetBtn = document.getElementById('resetConfig');
+        const reloadBtn = document.getElementById('reloadConfig');
+        const container = document.getElementById('jsonEditor');
+
+        let editor = null;
+        let initialConfig = {};
+
+        function showToast(message, type) {
+            if (!toast) {
+                return;
+            }
+            toast.textContent = message;
+            toast.className = 'toast show' + (type ? ' ' + type : '');
+            setTimeout(() => {
+                toast.className = 'toast';
+            }, 2000);
+        }
+
+        function initEditor() {
+            if (!window.JSONEditor || !container) {
+                showToast('编辑器加载失败', 'error');
+                return;
+            }
+            editor = new JSONEditor(container, { mode: 'code' });
+            if (editor.aceEditor) {
+                editor.aceEditor.setTheme('ace/theme/monokai');
+                editor.aceEditor.setOptions({
+                    fontFamily: 'JetBrains Mono, SF Mono, Menlo, Consolas, monospace',
+                    fontSize: '13px'
+                });
+            }
+        }
+
+        async function loadConfig() {
+            try {
+                const response = await axios.get('/api/config');
+                initialConfig = response.data || {};
+                editor.set(initialConfig);
+                showToast('配置已加载', 'success');
+            } catch (error) {
+                console.error('加载配置失败:', error);
+                showToast('配置加载失败', 'error');
+            }
+        }
+
+        async function saveConfig() {
+            try {
+                const config = editor.get();
+                await axios.put('/api/config', config);
+                initialConfig = config;
+                showToast('配置已保存', 'success');
+            } catch (error) {
+                console.error('保存配置失败:', error);
+                const message = error && error.response && error.response.data && error.response.data.detail
+                    ? error.response.data.detail
+                    : '保存失败，请检查配置内容';
+                showToast(message, 'error');
+            }
+        }
+
+        async function reloadConfig() {
+            try {
+                await axios.post('/api/config/reload');
+                showToast('系统已刷新，新配置生效中', 'success');
+            } catch (error) {
+                console.error('热重载失败:', error);
+                showToast('热重载失败', 'error');
+            }
+        }
+
+        function resetConfig() {
+            if (!editor) {
+                return;
+            }
+            editor.set(initialConfig || {});
+            showToast('已重置为已加载配置', 'success');
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initEditor();
+            if (editor) {
+                loadConfig();
+            }
+
+            if (saveBtn) {
+                saveBtn.addEventListener('click', saveConfig);
+            }
+            if (resetBtn) {
+                resetBtn.addEventListener('click', resetConfig);
+            }
+            if (reloadBtn) {
+                reloadBtn.addEventListener('click', reloadConfig);
+            }
+        });
+    </script>
+</body>
+</html>

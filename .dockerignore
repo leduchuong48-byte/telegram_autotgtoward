@@ -1,0 +1,23 @@
+# Git metadata
+.git
+.gitignore
+
+# Python cache
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+# Runtime data
+.env
+db/
+logs/
+sessions/
+temp/
+rss/data/
+rss/media/
+ufb/config/
+
+# OS/IDE
+.DS_Store
+.idea/
+.vscode/

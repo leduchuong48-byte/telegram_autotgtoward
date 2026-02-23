@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Telegram Login Wizard</title>
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="/static/icons/apple-icon-180.png">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js');
+            });
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --glass-bg: rgba(255, 255, 255, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.4);
+            --shadow: 0 30px 60px rgba(15, 23, 42, 0.2);
+            --accent: #0f6fff;
+            --accent-dark: #0b5ad1;
+            --text-muted: rgba(15, 23, 42, 0.6);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, sans-serif;
+            background: radial-gradient(circle at top left, #f2f5fb, #dfe6f2 40%, #cfd9ec 75%, #c5d2ea);
+            color: #0f172a;
+            padding: 24px;
+        }
+
+        .wizard-card {
+            width: min(520px, 100%);
+            padding: 28px;
+            border-radius: 24px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(18px);
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .wizard-header {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            padding: 6px 12px;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.08);
+            color: #111827;
+            width: fit-content;
+        }
+
+        .badge i {
+            color: var(--accent);
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.6rem;
+        }
+
+        .status-text {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        .step {
+            display: none;
+            flex-direction: column;
+            gap: 14px;
+            padding: 18px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(15, 23, 42, 0.08);
+        }
+
+        .step.active {
+            display: flex;
+        }
+
+        .step-title {
+            font-weight: 600;
+        }
+
+        label {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid rgba(15, 23, 42, 0.15);
+            background: rgba(255, 255, 255, 0.9);
+            font-size: 1rem;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(15, 111, 255, 0.15);
+        }
+
+        .btn {
+            width: 100%;
+            border: none;
+            border-radius: 12px;
+            padding: 12px 16px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+            color: #ffffff;
+            box-shadow: 0 12px 24px rgba(15, 111, 255, 0.25);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+        }
+
+        .hint {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            padding: 10px 14px;
+            border-radius: 12px;
+            background: rgba(15, 23, 42, 0.05);
+        }
+
+        .hint.error {
+            color: #b91c1c;
+            background: rgba(248, 113, 113, 0.15);
+        }
+    </style>
+</head>
+<body>
+    <div class="wizard-card">
+        <div class="wizard-header">
+            <div class="badge"><i class="bi bi-shield-lock"></i> Telegram Secure Login</div>
+            <h1>Telegram Login Wizard</h1>
+            <div class="status-text" id="statusText">Checking Telegram connection status...</div>
+        </div>
+
+        <div class="step" id="stepPhone">
+            <div class="step-title">Step 1 - Enter phone</div>
+            <label for="phoneInput">Phone number (with country code)</label>
+            <input type="tel" id="phoneInput" placeholder="+86 138****8888" autocomplete="tel">
+            <button class="btn btn-primary" id="sendCodeBtn">Send code</button>
+        </div>
+
+        <div class="step" id="stepCode">
+            <div class="step-title">Step 2 - Enter code</div>
+            <label for="codeInput">Telegram verification code</label>
+            <input type="text" id="codeInput" placeholder="12345" inputmode="numeric" autocomplete="one-time-code">
+            <button class="btn btn-primary" id="verifyCodeBtn">Verify code</button>
+        </div>
+
+        <div class="step" id="stepPassword">
+            <div class="step-title">Step 3 - Enter 2FA password</div>
+            <label for="passwordInput">Two-factor password</label>
+            <input type="password" id="passwordInput" placeholder="Enter Telegram 2FA password" autocomplete="current-password">
+            <button class="btn btn-primary" id="verifyPasswordBtn">Finish login</button>
+        </div>
+
+        <div class="hint" id="hintBox">Enter your phone number to start.</div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.6.8/dist/axios.min.js"></script>
+    <script>
+        const statusText = document.getElementById('statusText');
+        const hintBox = document.getElementById('hintBox');
+        const stepPhone = document.getElementById('stepPhone');
+        const stepCode = document.getElementById('stepCode');
+        const stepPassword = document.getElementById('stepPassword');
+        const sendCodeBtn = document.getElementById('sendCodeBtn');
+        const verifyCodeBtn = document.getElementById('verifyCodeBtn');
+        const verifyPasswordBtn = document.getElementById('verifyPasswordBtn');
+
+        function showHint(message, type) {
+            if (!hintBox) {
+                return;
+            }
+            hintBox.textContent = message;
+            hintBox.className = 'hint' + (type ? ' ' + type : '');
+        }
+
+        function setActiveStep(status) {
+            stepPhone.classList.remove('active');
+            stepCode.classList.remove('active');
+            stepPassword.classList.remove('active');
+
+            if (status === 'waiting_for_code') {
+                stepCode.classList.add('active');
+                showHint('Enter the code you received in Telegram.');
+                return;
+            }
+            if (status === 'waiting_for_password') {
+                stepPassword.classList.add('active');
+                showHint('2FA detected. Enter your password.');
+                return;
+            }
+            stepPhone.classList.add('active');
+            showHint('Enter your phone number to start.');
+        }
+
+        async function fetchStatus() {
+            try {
+                const response = await axios.get('/api/tg/status');
+                const status = response.data && response.data.status ? response.data.status : 'waiting_for_phone';
+                if (statusText) {
+                    statusText.textContent = status === 'logged_in'
+                        ? 'Telegram is logged in, redirecting...'
+                        : 'Current status: ' + status.replaceAll('_', ' ');
+                }
+                if (status === 'logged_in') {
+                    window.location.href = '/rss/dashboard';
+                    return;
+                }
+                setActiveStep(status);
+            } catch (error) {
+                showHint('Status check failed. Try again.', 'error');
+            }
+        }
+
+        async function sendPhone() {
+            const phoneInput = document.getElementById('phoneInput');
+            const phone = phoneInput ? phoneInput.value.trim() : '';
+            if (!phone) {
+                showHint('Phone number required.', 'error');
+                return;
+            }
+            sendCodeBtn.disabled = true;
+            try {
+                const response = await axios.post('/api/tg/auth/phone', { phone });
+                const status = response.data && response.data.status;
+                if (status === 'logged_in') {
+                    window.location.href = '/rss/dashboard';
+                    return;
+                }
+                setActiveStep('waiting_for_code');
+            } catch (error) {
+                const message = error && error.response && error.response.data && error.response.data.detail
+                    ? error.response.data.detail
+                    : 'Failed to send code';
+                showHint(message, 'error');
+            } finally {
+                sendCodeBtn.disabled = false;
+            }
+        }
+
+        async function verifyCode() {
+            const codeInput = document.getElementById('codeInput');
+            const code = codeInput ? codeInput.value.trim() : '';
+            if (!code) {
+                showHint('Verification code required.', 'error');
+                return;
+            }
+            verifyCodeBtn.disabled = true;
+            try {
+                const response = await axios.post('/api/tg/auth/code', { code });
+                const status = response.data && response.data.status;
+                if (status === '2fa_required') {
+                    setActiveStep('waiting_for_password');
+                    return;
+                }
+                if (status === 'success') {
+                    window.location.href = '/rss/dashboard';
+                    return;
+                }
+                setActiveStep('waiting_for_code');
+            } catch (error) {
+                const message = error && error.response && error.response.data && error.response.data.detail
+                    ? error.response.data.detail
+                    : 'Code verification failed';
+                showHint(message, 'error');
+            } finally {
+                verifyCodeBtn.disabled = false;
+            }
+        }
+
+        async function verifyPassword() {
+            const passwordInput = document.getElementById('passwordInput');
+            const password = passwordInput ? passwordInput.value.trim() : '';
+            if (!password) {
+                showHint('2FA password required.', 'error');
+                return;
+            }
+            verifyPasswordBtn.disabled = true;
+            try {
+                const response = await axios.post('/api/tg/auth/password', { password });
+                const status = response.data && response.data.status;
+                if (status === 'success') {
+                    window.location.href = '/rss/dashboard';
+                    return;
+                }
+                showHint('Continue the login flow.');
+            } catch (error) {
+                const message = error && error.response && error.response.data && error.response.data.detail
+                    ? error.response.data.detail
+                    : '2FA login failed';
+                showHint(message, 'error');
+            } finally {
+                verifyPasswordBtn.disabled = false;
+            }
+        }
+
+        if (sendCodeBtn) {
+            sendCodeBtn.addEventListener('click', sendPhone);
+        }
+        if (verifyCodeBtn) {
+            verifyCodeBtn.addEventListener('click', verifyCode);
+        }
+        if (verifyPasswordBtn) {
+            verifyPasswordBtn.addEventListener('click', verifyPassword);
+        }
+
+        fetchStatus();
+        setInterval(fetchStatus, 3000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+services:
+  autotgtoward:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: telegram_autotgtoward:2.0.0
+    container_name: telegram_autotgtoward
+    ports:
+      - "1008:8000"
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - TZ=${TZ:-Asia/Shanghai}
+      - INVITE_CODE=${INVITE_CODE:-}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-}
+    volumes:
+      - ./db:/app/db
+      - ./logs:/app/logs
+      - ./sessions:/app/sessions
+      - ./temp:/app/temp
+      - ./ufb/config:/app/ufb/config
+      - ./config:/app/config
+      - ./rss/data:/app/rss/data
+      - ./rss/media:/app/rss/media
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "if [ \"$${RSS_ENABLED}\" != \"true\" ]; then exit 0; fi; code=$$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/api/system/status); [ \"$$code\" = \"200\" ] || [ \"$$code\" = \"401\" ]"
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    stdin_open: true
+    tty: true

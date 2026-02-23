@@ -1,0 +1,17 @@
+{
+  "INVITE_CODE": "change_me",
+  "telegram": {
+    "api_id": "",
+    "api_hash": "",
+    "bot_token": "",
+    "phone": ""
+  },
+  "ai_service": {
+    "enabled": false,
+    "provider": "openai",
+    "api_key": "",
+    "model": "gpt-3.5-turbo",
+    "base_url": "",
+    "key_strategy": "sequence"
+  }
+}

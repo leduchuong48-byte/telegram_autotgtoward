@@ -1,0 +1,56 @@
+# Env files
+.env
+.env.*
+!.env.example
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual envs
+.venv/
+venv/
+env/
+ENV/
+
+# Runtime directories and data
+db/**
+!db/
+!db/.gitkeep
+
+logs/**
+!logs/
+!logs/.gitkeep
+
+sessions/**
+!sessions/
+!sessions/.gitkeep
+
+temp/**
+!temp/
+!temp/.gitkeep
+
+rss/data/**
+!rss/data/
+!rss/data/.gitkeep
+
+rss/media/**
+!rss/media/
+!rss/media/.gitkeep
+
+ufb/config/**
+!ufb/config/
+!ufb/config/.gitkeep
+
+# Session artifacts
+*.session
+*.session-journal
+
+# IDE/OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
