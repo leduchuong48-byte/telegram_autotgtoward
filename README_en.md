@@ -1,69 +1,100 @@
-# Telegram AutoTG Toward
+# Project Name
+
+![Cover or Demo](docs/cover.gif)
+
+[![Docker Pulls](https://img.shields.io/docker/pulls/leduchuong/telegram_chanel_autotoward?logo=docker&label=Docker%20Pulls)](https://hub.docker.com/r/leduchuong/telegram_chanel_autotoward)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Build: Passing](https://img.shields.io/badge/Build-Passing-brightgreen.svg)](#)
+[![Platform: ARM64/AMD64](https://img.shields.io/badge/Platform-ARM64%2FAMD64-blue.svg)](#)
 
 [中文](README.md)
 
-Telegram AutoTG Toward is a **WebUI-first** Telegram automation platform built with `Telethon + FastAPI + Jinja2`, providing visual configuration, setup wizard login, rule-driven forwarding, live logs, and RSS operations in one place.
+> Better alternative to TelegramForwarder for E-ink devices.
+
+One sentence describing what this project does.
+
+## Why this tool?
+
+Tired of <slow workflow> and <manual retries>? This tool is built to remove the 3-second lag and frequent failure points that make demos and operations unreliable.
 
 ## Why This Project Is Useful (Pain Points)
 
-In long-running multi-channel operations, rules often become scattered across commands and scripts, changes are hard to track, and runtime visibility is limited. This project consolidates listening, filtering, rewriting, forwarding, RSS management, and operations into a single maintainable workflow.
+- Pain point 1: The most error-prone or time-consuming part in the old workflow
+- Pain point 2: Cost/maintenance burden of existing solutions
+- Pain point 3: Delivery or collaboration bottlenecks
 
 ## What the Project Does (Features)
 
-- **WebUI**: login page, dashboard, config editor, logs, and system status
-- **Setup Wizard**: guided Telegram authorization from the web interface
-- **Rule-driven forwarding**: keyword/regex/media filters, replacement, delay, and routing
-- **AI integration**: OpenAI / Gemini / DeepSeek / Qwen / Grok / Claude (config-based)
-- **RSS subsystem**: feed handling, rule management, and media/title templates
-- **Observability**: health/status APIs and runtime log endpoints
+- Core capability A
+- Core capability B
+- Core capability C
 
-## Architecture Overview
+## ⚡️ Quick Start (Run in 3 seconds)
 
-- `main.py`: starts Telegram clients and FastAPI runtime
-- `rss/main.py`: web app bootstrap and static mounts
-- `rss/app/routes/*`: auth, config, system, Telegram auth, and bot control APIs
-- `filters/`: message processing and filter chain
-- `handlers/`: command and interaction orchestration
-- `models/`: persistence and data access
+```bash
+docker run --rm -it --pull=always docker.io/leduchuong/telegram_chanel_autotoward:latest
+```
+
+> Keep this command copy-paste ready before release; do not require readers to edit parameters.
+
+## Docker Compose (Portainer / NAS ready)
+
+```yaml
+services:
+  app:
+    image: docker.io/leduchuong/telegram_chanel_autotoward:latest
+    container_name: autotgtoward
+    restart: unless-stopped
+    environment:
+      - TZ=UTC
+    ports:
+      - "1008:1008"
+```
+
+## GitHub Topics (pick at least 5)
+
+`#nas` `#homelab` `#selfhosted` `#synology` `#unraid` `#eink` `#automation`
 
 ## Getting Started
 
 ### Prerequisites
 
-- Docker and Docker Compose (recommended)
-- Or Python 3.11+
-- Telegram credentials: `API_ID`, `API_HASH`, `BOT_TOKEN`, `USER_ID`
+- Runtime/language versions
+- Dependency and system requirements
 
-### Run with Docker
+### Installation
 
 ```bash
-cp .env.example .env
-# fill required fields in .env
-
-docker compose up -d --build
+<install command>
 ```
 
-Default URL: `http://localhost:1008`
-
-### Run Locally
+### Run
 
 ```bash
-python3 -m venv .venv
-. .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env
-python main.py
+<run command>
+```
+
+## Usage Example
+
+```bash
+<example command>
 ```
 
 ## Where to Get Help
 
-- Issues: `https://github.com/leduchuong48-byte/telegram_autotgtoward/issues`
-- Please include sanitized logs and reproducible steps
+- Issues: `<repo>/issues`
+- Discussions / docs links
+- Contact (optional)
 
 ## Maintainers and Contributors
 
-- Maintainer: `@leduchuong48-byte`
+- Maintainer: @your-name
+- Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## Disclaimer
 
 By using this project, you acknowledge and agree to the [Disclaimer](DISCLAIMER.md).
+
+## License
+
+For example MIT, see [LICENSE](LICENSE)

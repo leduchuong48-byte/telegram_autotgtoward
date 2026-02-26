@@ -38,7 +38,7 @@ async def fetch_available_models(request: FetchModelsRequest = Body(...)):
         if request.provider == "openai":
             base_url = "https://api.openai.com/v1"
         elif request.provider == "deepseek":
-            base_url = "https://api.deepseek.com"
+            base_url = "https://api.openai.com/v1"
         elif request.provider == "gemini":
             base_url = ""
 

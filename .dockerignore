@@ -1,23 +1,53 @@
-# Git metadata
-.git
-.gitignore
+# 忽略环境变量文件
+.env
+.env.example
 
-# Python cache
+# 忽略数据库文件
+*.db
+db/forward.db1
+
+# 忽略 Python 生成的缓存文件
 **/__pycache__/
 *.py[cod]
 *$py.class
 
-# Runtime data
-.env
-db/
-logs/
-sessions/
-temp/
-rss/data/
-rss/media/
-ufb/config/
+# 忽略虚拟环境
+**/venv/
+**/env/
+**/ENV/
 
-# OS/IDE
-.DS_Store
+# 忽略 Telethon 会话文件
+*.session
+*.session-journal 
+
+# 忽略 IDE 配置文件
 .idea/
-.vscode/
+ufb/.idea
+
+# 忽略示例和临时配置文件
+/example
+/config/*
+ufb/config/*
+
+# 忽略无用的图片和测试目录
+**/test/
+**/images/
+
+# 忽略 RSS 相关数据和临时文件
+/rss/media/*
+/rss/data/*
+
+# 忽略日志文件
+logs/*
+
+# 忽略临时文件夹
+/temp/*
+
+# 额外忽略 `.git` 和 Docker 相关文件，防止意外复制
+.git
+.gitignore
+.dockerignore
+Dockerfile
+docker-compose.yml
+.github
+.gitattributes

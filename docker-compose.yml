@@ -1,40 +1,42 @@
 services:
   autotgtoward:
+    # 使用本地源码构建镜像（Dockerfile 位于仓库根目录）
     build:
       context: .
       dockerfile: Dockerfile
-    image: telegram_autotgtoward:2.0.0
-    container_name: telegram_autotgtoward
+      args:
+        BASE_IMAGE: ${BASE_IMAGE:-python:3.11-slim}
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.tuna.tsinghua.edu.cn/simple}
+        PIP_TRUSTED_HOST: ${PIP_TRUSTED_HOST:-pypi.tuna.tsinghua.edu.cn}
+    # 本地镜像名（可按需改成你自己的 tag）
+    image: autotgtoward:1.7.2
+    container_name: autotgtoward
+    # 如果需要使用 RSS 功能，请取消以下注释
     ports:
       - "1008:8000"
-    restart: unless-stopped
-    env_file:
-      - .env
+    restart: always
     environment:
-      - TZ=${TZ:-Asia/Shanghai}
-      - INVITE_CODE=${INVITE_CODE:-}
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-}
+      - INVITE_CODE=${INVITE_CODE}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - TZ=${TZ}
     volumes:
       - ./db:/app/db
+      - ./.env:/app/.env
       - ./logs:/app/logs
       - ./sessions:/app/sessions
-      - ./temp:/app/temp
+      - "/vol1/1000/media/movie/other_movie:/app/temp"
       - ./ufb/config:/app/ufb/config
       - ./config:/app/config
       - ./rss/data:/app/rss/data
       - ./rss/media:/app/rss/media
     logging:
-      driver: json-file
+      driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
         compress: "true"
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "if [ \"$${RSS_ENABLED}\" != \"true\" ]; then exit 0; fi; code=$$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/api/system/status); [ \"$$code\" = \"200\" ] || [ \"$$code\" = \"401\" ]"
-        ]
+      test: ["CMD-SHELL", "if [ \"$${RSS_ENABLED}\" != \"true\" ]; then exit 0; fi; code=$$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/api/system/status); [ \"$$code\" = \"200\" ] || [ \"$$code\" = \"401\" ]"]
       interval: 30s
       timeout: 5s
       retries: 3

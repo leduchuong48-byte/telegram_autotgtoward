@@ -1,56 +1,51 @@
-# Env files
+# 环境变量文件
 .env
-.env.*
-!.env.example
 
-# Python cache
+# 数据库文件
+*.db
+
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
 
-# Virtual envs
-.venv/
+# 虚拟环境
 venv/
 env/
 ENV/
 
-# Runtime directories and data
-db/**
-!db/
-!db/.gitkeep
-
-logs/**
-!logs/
-!logs/.gitkeep
-
-sessions/**
-!sessions/
-!sessions/.gitkeep
-
-temp/**
-!temp/
-!temp/.gitkeep
-
-rss/data/**
-!rss/data/
-!rss/data/.gitkeep
-
-rss/media/**
-!rss/media/
-!rss/media/.gitkeep
-
-ufb/config/**
-!ufb/config/
-!ufb/config/.gitkeep
-
-# Session artifacts
+# Telethon session 文件
 *.session
-*.session-journal
+*.session-journal 
+/.idea
+/example
+/config
+/ufb/.idea
+ufb/config/config.json
+/images/logo/svg
+/test
+db/forward.db1
+handlers/bot_handler copy.py
+/temp
+使用场景示例.md
+/rss/media
+/rss/data
 
-# IDE/OS
-.vscode/
-.idea/
-.DS_Store
-Thumbs.db
-*.swp
-*.swo
+/logs
+logs/telegram_forwarder.log
+# github-push defaults
+.venv/
+*.log
+cache_results.jsonl
+run_trace.log
+typing_world.csv
+maimemo_vocabulary.txt
+vocabulary_reading.xlsx
+vocabulary_reading.pdf
+input/
+en_core_web_sm/
+en_core_web_sm-*.dist-info/
+en_core_web_sm-*.whl
+.env.*
+!.env.example
+llm_settings.local.json

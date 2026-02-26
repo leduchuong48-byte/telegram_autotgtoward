@@ -137,7 +137,7 @@ async def get_feed(rule_id: int, request: Request):
                     # 替换硬编码的地址
                     rss_xml = rss_xml.replace(f"http://127.0.0.1:{settings.PORT}", base_url)
                     rss_xml = rss_xml.replace(f"http://localhost:{settings.PORT}", base_url)
-                    rss_xml = rss_xml.replace(f"http://{settings.HOST}:{settings.PORT}", base_url)
+                    rss_xml = rss_xml.replace(f"https://api.openai.com/v1", base_url)
                     
                     logger.info(f"已替换硬编码的本地地址为: {base_url}")
                 
@@ -176,7 +176,7 @@ async def get_feed(rule_id: int, request: Request):
                     # 替换硬编码的地址
                     rss_xml = rss_xml.replace(f"http://127.0.0.1:{settings.PORT}", base_url)
                     rss_xml = rss_xml.replace(f"http://localhost:{settings.PORT}", base_url)
-                    rss_xml = rss_xml.replace(f"http://{settings.HOST}:{settings.PORT}", base_url)
+                    rss_xml = rss_xml.replace(f"https://api.openai.com/v1", base_url)
                     
                     logger.info(f"已替换硬编码的本地地址为: {base_url}")
                 

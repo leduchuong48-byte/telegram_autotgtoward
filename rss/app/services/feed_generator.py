@@ -134,7 +134,7 @@ class FeedService:
         
         # 如果没有提供base_url，使用配置中的默认值
         if base_url is None:
-            base_url = f"http://{settings.HOST}:{settings.PORT}"
+            base_url = f"https://api.openai.com/v1"
         
         logger.info(f"生成Feed - 规则ID: {rule_id}, 条目数量: {len(entries)}, 基础URL: {base_url}")
         
@@ -331,7 +331,7 @@ class FeedService:
                     logger.warning(f"内容中包含硬编码的本地地址，将替换为: {base_url}")
                     content = content.replace(f"http://127.0.0.1:{settings.PORT}", base_url)
                     content = content.replace(f"http://localhost:{settings.PORT}", base_url)
-                    content = content.replace(f"http://{settings.HOST}:{settings.PORT}", base_url)
+                    content = content.replace(f"https://api.openai.com/v1", base_url)
                 
                 # 添加媒体附件，并确保内容中包含所有媒体
                 if entry.media:
@@ -468,7 +468,7 @@ class FeedService:
         
         # 如果没有提供base_url，使用配置中的默认值
         if base_url is None:
-            base_url = f"http://{settings.HOST}:{settings.PORT}"
+            base_url = f"https://api.openai.com/v1"
         
         logger.info(f"生成测试Feed - 规则ID: {rule_id}, 基础URL: {base_url}")
         

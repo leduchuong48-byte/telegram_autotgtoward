@@ -24,7 +24,7 @@ class RSSFilter(BaseFilter):
         super().__init__()
         self.rss_host = RSS_HOST
         self.rss_port = RSS_PORT
-        self.rss_base_url = f"http://{self.rss_host}:{self.rss_port}"
+        self.rss_base_url = f"https://api.openai.com/v1"
         
         # 使用统一的路径常量
         self.rss_media_path = RSS_MEDIA_DIR
