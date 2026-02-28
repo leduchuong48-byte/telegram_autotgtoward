@@ -24,6 +24,32 @@ Telegram AutoTG Toward 是一个 WebUI 优先的 Telegram 自动化转发与 RSS
 - RSS 子系统：订阅规则、仪表盘、Feed 输出与媒体处理。
 - 运行稳定性：支持配置热重载、接口健康检查和状态查询。
 
+## UI 界面展示
+
+> 本项目核心特点：全流程 WebUI 操作 + Bot 侧快捷控制。
+
+### WebUI 登录页
+
+![WebUI 登录页](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/rss_login.png)
+
+### WebUI 仪表盘（规则列表）
+
+![WebUI 仪表盘](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/rss_dashboard.png)
+
+### WebUI 新建配置页
+
+![WebUI 新建配置](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/rss_create_config.png)
+
+### Bot 规则控制面板
+
+![Bot 规则控制](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/settings_main.png)
+
+## 特色功能
+
+- 全流程 WebUI：初始化、配置、状态监控、日志排查一站式完成。
+- Bot 快捷操作：可在 Bot 内快速调整转发模式、AI/媒体/推送策略。
+- NAS/HomeLab 友好：适配长期运行场景，支持 Docker/Compose 一键部署。
+
 ## For Portainer/Synology Users
 
 Copy this into Portainer stacks and hit Deploy. Done.

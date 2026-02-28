@@ -24,6 +24,32 @@ Telegram AutoTG Toward is a WebUI-first Telegram forwarding and RSS operations p
 - RSS subsystem: feed rules, dashboard, feed output, and media handling.
 - Runtime stability: config hot reload, health checks, and status APIs.
 
+## UI Preview
+
+> Key value: full workflow via WebUI, plus quick bot-side controls.
+
+### WebUI Login
+
+![WebUI Login](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/rss_login.png)
+
+### WebUI Dashboard (Rule List)
+
+![WebUI Dashboard](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/rss_dashboard.png)
+
+### WebUI Create Configuration
+
+![WebUI Create Config](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/rss_create_config.png)
+
+### Bot Rule Control Panel
+
+![Bot Rule Control](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/settings_main.png)
+
+## Feature Highlights
+
+- Full WebUI workflow for setup, configuration, monitoring, and troubleshooting.
+- Bot-side quick operations for forwarding mode, AI/media/push strategies.
+- NAS/HomeLab ready deployment with Docker/Compose for long-running use.
+
 ## For Portainer/Synology Users
 
 Copy this into Portainer stacks and hit Deploy. Done.
