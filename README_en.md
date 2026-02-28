@@ -1,100 +1,99 @@
-# Project Name
+# Telegram AutoTG Toward
 
-![Cover or Demo](docs/cover.gif)
-
-[![Docker Pulls](https://img.shields.io/docker/pulls/leduchuong/telegram_chanel_autotoward?logo=docker&label=Docker%20Pulls)](https://hub.docker.com/r/leduchuong/telegram_chanel_autotoward)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Build: Passing](https://img.shields.io/badge/Build-Passing-brightgreen.svg)](#)
-[![Platform: ARM64/AMD64](https://img.shields.io/badge/Platform-ARM64%2FAMD64-blue.svg)](#)
+[![Docker Pulls](https://img.shields.io/docker/pulls/leduchuong/telegram_chanel_autotoward?logo=docker&style=flat-square)](https://hub.docker.com/r/leduchuong/telegram_chanel_autotoward)
+[![GitHub Stars](https://img.shields.io/github/stars/leduchuong48-byte/telegram_autotgtoward?style=flat-square)](https://github.com/leduchuong48-byte/telegram_autotgtoward/stargazers)
+[![License](https://img.shields.io/github/license/leduchuong48-byte/telegram_autotgtoward?style=flat-square)](https://github.com/leduchuong48-byte/telegram_autotgtoward/blob/main/LICENSE)
 
 [中文](README.md)
 
-> Better alternative to TelegramForwarder for E-ink devices.
+Telegram AutoTG Toward is a WebUI-first Telegram forwarding and RSS operations platform built with `Telethon + FastAPI + Jinja2`, designed for long-running multi-source monitoring and message distribution.
 
-One sentence describing what this project does.
+## Ownership and Maintenance
 
-## Why this tool?
+- Official repository: `https://github.com/leduchuong48-byte/telegram_autotgtoward`
+- Official image: `https://hub.docker.com/r/leduchuong/telegram_chanel_autotoward`
+- Maintainer: `@leduchuong48-byte`
+- Project metadata and release notes are maintained for this repository only.
 
-Tired of <slow workflow> and <manual retries>? This tool is built to remove the 3-second lag and frequent failure points that make demos and operations unreliable.
+## Core Features
 
-## Why This Project Is Useful (Pain Points)
+- WebUI management: auth, config editor, logs, and system status.
+- Setup Wizard: complete Telegram authorization from the web page.
+- Rule-driven forwarding: keyword/regex/media filters, replacement templates, delayed processing.
+- AI processing: configurable providers including OpenAI, Gemini, DeepSeek, Qwen, Grok, and Claude.
+- RSS subsystem: feed rules, dashboard, feed output, and media handling.
+- Runtime stability: config hot reload, health checks, and status APIs.
 
-- Pain point 1: The most error-prone or time-consuming part in the old workflow
-- Pain point 2: Cost/maintenance burden of existing solutions
-- Pain point 3: Delivery or collaboration bottlenecks
+## For Portainer/Synology Users
 
-## What the Project Does (Features)
+Copy this into Portainer stacks and hit Deploy. Done.
 
-- Core capability A
-- Core capability B
-- Core capability C
-
-## ⚡️ Quick Start (Run in 3 seconds)
-
-```bash
-docker run --rm -it --pull=always docker.io/leduchuong/telegram_chanel_autotoward:latest
-```
-
-> Keep this command copy-paste ready before release; do not require readers to edit parameters.
-
-## Docker Compose (Portainer / NAS ready)
+## Docker Compose
 
 ```yaml
 services:
-  app:
-    image: docker.io/leduchuong/telegram_chanel_autotoward:latest
-    container_name: autotgtoward
+  autotgtoward:
+    image: leduchuong/telegram_chanel_autotoward:latest
+    container_name: telegram_autotgtoward
     restart: unless-stopped
-    environment:
-      - TZ=UTC
     ports:
-      - "1008:1008"
+      - "1008:8000"
+    env_file:
+      - .env
+    volumes:
+      - ./db:/app/db
+      - ./sessions:/app/sessions
+      - ./logs:/app/logs
+      - ./config:/app/config
+      - ./rss/data:/app/rss/data
 ```
 
-## GitHub Topics (pick at least 5)
+## Quick Start
 
-`#nas` `#homelab` `#selfhosted` `#synology` `#unraid` `#eink` `#automation`
-
-## Getting Started
-
-### Prerequisites
-
-- Runtime/language versions
-- Dependency and system requirements
-
-### Installation
+### Run with Docker
 
 ```bash
-<install command>
+cp .env.example .env
+# edit .env and set at least API_ID/API_HASH/BOT_TOKEN/USER_ID/INVITE_CODE
+
+docker compose up -d --build
 ```
 
-### Run
+Open: `http://localhost:1008`
+
+### Run Locally
 
 ```bash
-<run command>
+python3 -m venv .venv
+. .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+python main.py
 ```
 
-## Usage Example
+## Key Paths
 
-```bash
-<example command>
-```
+- `main.py`: bootstrap (Telegram clients + web runtime).
+- `rss/main.py`: FastAPI app bootstrap and route mounting.
+- `rss/app/routes/`: auth, config, system, Telegram auth, and bot control APIs.
+- `filters/`: message filtering pipeline.
+- `handlers/`: command/interaction orchestration.
+- `models/`: database models and migration logic.
 
-## Where to Get Help
+## Troubleshooting
 
-- Issues: `<repo>/issues`
-- Discussions / docs links
-- Contact (optional)
+- UI is up but tasks do nothing: check Telegram credentials in `.env`.
+- Config saved but behavior unchanged: trigger config reload in WebUI and inspect logs.
+- Auth issues: verify invite code, cookies, and `JWT_SECRET_KEY`.
 
-## Maintainers and Contributors
+## Support
 
-- Maintainer: @your-name
-- Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
+- Issues: `https://github.com/leduchuong48-byte/telegram_autotgtoward/issues`
+
+## License
+
+GPL-3.0. See [LICENSE](LICENSE).
 
 ## Disclaimer
 
 By using this project, you acknowledge and agree to the [Disclaimer](DISCLAIMER.md).
-
-## License
-
-For example MIT, see [LICENSE](LICENSE)
