@@ -26,23 +26,23 @@ Telegram AutoTG Toward is a WebUI-first Telegram forwarding and RSS operations p
 
 ## UI Preview
 
-> Key value: full workflow via WebUI, plus quick bot-side controls.
+> The screenshots below are rendered from the current repository templates and reflect this project's WebUI pages.
 
 ### WebUI Login
 
-![WebUI Login](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/rss_login.png)
+![WebUI Login](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/ui_real/ui_login_real.png)
 
-### WebUI Dashboard (Rule List)
+### WebUI Register
 
-![WebUI Dashboard](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/rss_dashboard.png)
+![WebUI Register](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/ui_real/ui_register_real.png)
 
-### WebUI Create Configuration
+### Telegram Setup Wizard
 
-![WebUI Create Config](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/rss_create_config.png)
+![Setup Wizard](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/ui_real/ui_setup_wizard_real.png)
 
-### Bot Rule Control Panel
+### RSS Dashboard (Rule Management)
 
-![Bot Rule Control](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/settings_main.png)
+![RSS Dashboard](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/ui_real/ui_dashboard_real.png)
 
 ## Feature Highlights
 

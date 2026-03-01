@@ -26,23 +26,23 @@ Telegram AutoTG Toward 是一个 WebUI 优先的 Telegram 自动化转发与 RSS
 
 ## UI 界面展示
 
-> 本项目核心特点：全流程 WebUI 操作 + Bot 侧快捷控制。
+> 以下截图基于当前仓库模板实时渲染，展示本项目实际 WebUI 结构与交互页面。
 
 ### WebUI 登录页
 
-![WebUI 登录页](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/rss_login.png)
+![WebUI 登录页](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/ui_real/ui_login_real.png)
 
-### WebUI 仪表盘（规则列表）
+### WebUI 注册页
 
-![WebUI 仪表盘](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/rss_dashboard.png)
+![WebUI 注册页](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/ui_real/ui_register_real.png)
 
-### WebUI 新建配置页
+### Telegram 登录向导（Setup Wizard）
 
-![WebUI 新建配置](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/rss_create_config.png)
+![Setup Wizard](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/ui_real/ui_setup_wizard_real.png)
 
-### Bot 规则控制面板
+### RSS 仪表盘（规则管理）
 
-![Bot 规则控制](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/settings_main.png)
+![RSS 仪表盘](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/ui_real/ui_dashboard_real.png)
 
 ## 特色功能
 
