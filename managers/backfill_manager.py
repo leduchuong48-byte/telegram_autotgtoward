@@ -384,11 +384,12 @@ async def _passes_media_filters(rule, message) -> bool:
 
     if rule.enable_media_size_filter:
         size_bytes = await get_media_size(message.media)
-        size_mb = round(size_bytes / 1024 / 1024, 2)
+        size_mb = size_bytes / 1024 / 1024
+        size_mb_display = round(size_mb, 4)
         limit_mb = rule.max_media_size
         mode = _get_compare_mode(getattr(rule, "media_size_filter_mode", CompareMode.LESS))
-        if limit_mb and _is_size_filtered(size_mb, limit_mb, mode):
-            logger.info(f"视频大小 {size_mb}MB 未通过筛选 (阈值 {limit_mb}MB)")
+        if limit_mb is not None and _is_size_filtered(size_mb, limit_mb, mode):
+            logger.info(f"视频大小 {size_mb_display}MB 未通过筛选 (阈值 {limit_mb}MB)")
             return False
 
     if rule.enable_media_duration_filter:
@@ -853,10 +854,14 @@ async def run_video_forward(
     skipped_dup = 0
     skipped_non_video = 0
     skipped_media_filter = 0
-    over_limit_forwarded = 0
+    fallback_user_forwarded = 0
     skipped_keyword = 0
     processed = 0
     not_forwarded = 0
+    allow_over_limit_fallback_to_user = _get_env_bool(
+        "VIDEO_FORWARD_OVER_LIMIT_FALLBACK_TO_USER",
+        False,
+    )
 
     if notify_chat_id:
         try:
@@ -946,9 +951,19 @@ async def run_video_forward(
                     continue
 
                 if over_message_ids:
-                    logger.info(
-                        f"规则 {rule.id} 媒体超限 {len(over_message_ids)} 条，改用用户账号转发"
-                    )
+                    if allow_over_limit_fallback_to_user:
+                        logger.info(
+                            f"规则 {rule.id} 媒体超限 {len(over_message_ids)} 条，兼容模式下改用用户账号转发"
+                        )
+                    else:
+                        skipped_media_filter += len(over_message_ids)
+                        logger.info(
+                            f"规则 {rule.id} 媒体超限 {len(over_message_ids)} 条，严格模式下跳过，不降级到用户账号转发"
+                        )
+                        over_message_ids = []
+
+                if not pass_message_ids and not over_message_ids:
+                    continue
 
                 if use_merge_caption and (pass_message_ids or over_message_ids):
                     caption = message_text or ""
@@ -984,7 +999,7 @@ async def run_video_forward(
                         if wait_over:
                             flood_wait_seconds = max(flood_wait_seconds or 0, wait_over)
                         if ok_over:
-                            over_limit_forwarded += len(over_message_ids)
+                            fallback_user_forwarded += len(over_message_ids)
                 else:
                     ok = True
                     flood_wait_seconds = None
@@ -1005,7 +1020,7 @@ async def run_video_forward(
                         if wait_over:
                             flood_wait_seconds = max(flood_wait_seconds or 0, wait_over)
                         if ok_over:
-                            over_limit_forwarded += len(over_message_ids)
+                            fallback_user_forwarded += len(over_message_ids)
 
                 if ok:
                     processed += 1
@@ -1048,7 +1063,7 @@ async def run_video_forward(
                         (
                             f"视频转发进度：已扫描 {scanned}，已处理 {processed}，"
                             f"跳过非视频 {skipped_non_video}，跳过筛选 {skipped_media_filter}，"
-                            f"超限转发 {over_limit_forwarded}，"
+                            f"兼容降级转发 {fallback_user_forwarded}，"
                             f"跳过关键字 {skipped_keyword}，"
                             f"已跳过 {skipped_dup}，未转发 {not_forwarded}"
                         ),
@@ -1056,12 +1071,12 @@ async def run_video_forward(
                 except Exception:
                     pass
                 logger.info(
-                    "视频转发进度：已扫描 %s，已处理 %s，跳过非视频 %s，跳过筛选 %s，超限转发 %s，跳过关键字 %s，已跳过 %s，未转发 %s",
+                    "视频转发进度：已扫描 %s，已处理 %s，跳过非视频 %s，跳过筛选 %s，兼容降级转发 %s，跳过关键字 %s，已跳过 %s，未转发 %s",
                     scanned,
                     processed,
                     skipped_non_video,
                     skipped_media_filter,
-                    over_limit_forwarded,
+                    fallback_user_forwarded,
                     skipped_keyword,
                     skipped_dup,
                     not_forwarded,
@@ -1077,7 +1092,7 @@ async def run_video_forward(
                     (
                         f"视频转发已停止：已扫描 {scanned}，已处理 {processed}，"
                         f"跳过非视频 {skipped_non_video}，跳过筛选 {skipped_media_filter}，"
-                        f"超限转发 {over_limit_forwarded}，"
+                        f"兼容降级转发 {fallback_user_forwarded}，"
                         f"跳过关键字 {skipped_keyword}，"
                         f"已跳过 {skipped_dup}，未转发 {not_forwarded}"
                     ),
@@ -1088,7 +1103,7 @@ async def run_video_forward(
                     (
                         f"视频转发完成：已扫描 {scanned}，已处理 {processed}，"
                         f"跳过非视频 {skipped_non_video}，跳过筛选 {skipped_media_filter}，"
-                        f"超限转发 {over_limit_forwarded}，"
+                        f"兼容降级转发 {fallback_user_forwarded}，"
                         f"跳过关键字 {skipped_keyword}，"
                         f"已跳过 {skipped_dup}，未转发 {not_forwarded}"
                     ),
@@ -1098,24 +1113,24 @@ async def run_video_forward(
 
     if stopped:
         logger.info(
-            "视频转发已停止：已扫描 %s，已处理 %s，跳过非视频 %s，跳过筛选 %s，超限转发 %s，跳过关键字 %s，已跳过 %s，未转发 %s",
+            "视频转发已停止：已扫描 %s，已处理 %s，跳过非视频 %s，跳过筛选 %s，兼容降级转发 %s，跳过关键字 %s，已跳过 %s，未转发 %s",
             scanned,
             processed,
             skipped_non_video,
             skipped_media_filter,
-            over_limit_forwarded,
+            fallback_user_forwarded,
             skipped_keyword,
             skipped_dup,
             not_forwarded,
         )
     else:
         logger.info(
-            "视频转发完成：已扫描 %s，已处理 %s，跳过非视频 %s，跳过筛选 %s，超限转发 %s，跳过关键字 %s，已跳过 %s，未转发 %s",
+            "视频转发完成：已扫描 %s，已处理 %s，跳过非视频 %s，跳过筛选 %s，兼容降级转发 %s，跳过关键字 %s，已跳过 %s，未转发 %s",
             scanned,
             processed,
             skipped_non_video,
             skipped_media_filter,
-            over_limit_forwarded,
+            fallback_user_forwarded,
             skipped_keyword,
             skipped_dup,
             not_forwarded,

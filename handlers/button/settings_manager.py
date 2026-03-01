@@ -697,7 +697,7 @@ async def create_buttons(rule):
 
         buttons.append([
             Button.inline(
-                "📽 转发全部视频",
+                "📽 转发全部视频(严格筛选)",
                 f"forward_all_videos:{rule.id}"
             )
         ])

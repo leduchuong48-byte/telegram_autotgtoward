@@ -381,7 +381,9 @@ async def callback_forward_all_videos(event, rule_id, session, message, data):
     )
 
     if ok:
-        await event.answer('已开始转发全部视频，可用 /backfill_stop 停止')
+        fallback_enabled = _get_env_bool("VIDEO_FORWARD_OVER_LIMIT_FALLBACK_TO_USER", False)
+        mode_text = "兼容降级" if fallback_enabled else "严格筛选"
+        await event.answer(f'已开始转发全部视频（{mode_text}），可用 /backfill_stop 停止')
     else:
         await event.answer(msg)
 

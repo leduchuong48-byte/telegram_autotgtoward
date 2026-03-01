@@ -9,7 +9,7 @@ from handlers.list_handlers import *
 from utils.constants import TEMP_DIR
 import traceback
 from sqlalchemy import inspect
-from version import VERSION, UPDATE_INFO
+from version import VERSION, UPDATE_INFO, WELCOME_TEXT, APP_NAME
 import shlex
 import asyncio
 import logging
@@ -1013,15 +1013,13 @@ async def handle_changelog_command(event):
 
 async def handle_start_command(event):
     """处理 start 命令"""
-
-    welcome_text = f"欢迎使用Autotgtoward!\n当前版本v{VERSION}"
     await async_delete_user_message(event.client, event.message.chat_id, event.message.id, 0)
-    await reply_and_delete(event,welcome_text)
+    await reply_and_delete(event, WELCOME_TEXT)
 
 async def handle_help_command(event, command):
     """处理帮助命令"""
     help_text = (
-        f"🤖 **Telegram 消息转发机器人 v{VERSION}**\n\n"
+        f"🤖 **{APP_NAME} v{VERSION}**\n\n"
 
         "**基础命令**\n"
         "/start - 开始使用\n"

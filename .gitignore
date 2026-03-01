@@ -49,3 +49,4 @@ en_core_web_sm-*.whl
 .env.*
 !.env.example
 llm_settings.local.json
+config.json

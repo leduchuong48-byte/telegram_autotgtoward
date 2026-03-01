@@ -8,6 +8,11 @@
 
 Telegram AutoTG Toward is a WebUI-first Telegram forwarding control center focused on fast group-to-group forwarding operations, not just RSS subscription.
 
+## Release Notes
+
+- `v3.0`: Fixed unstable forwarding behavior for long-running workloads.
+- `v3.0`: Fixed an issue where messages failing filters could still be forwarded in user mode; strict filtering is now default.
+
 ## Why This Is Not a Generic RSS Tool
 
 - Instant rule creation from UI: open the "New Rule" modal and set `source link / source_chat_id / target_chat_id` directly.
