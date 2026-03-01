@@ -1,1 +1,1 @@
-🤖 Telegram forward hub: WebUI link/chat_id rules, Bot+Web sync, NAS self-hosted, lightweight. 🚀
+🤖 WebUI Telegram forward hub: link/chat_id rules, Bot+Web sync, NAS self-hosted. 🚀
