@@ -6,49 +6,53 @@
 
 [English](README_en.md)
 
-Telegram AutoTG Toward 是一个 WebUI 优先的 Telegram 自动化转发与 RSS 运营平台，基于 `Telethon + FastAPI + Jinja2`，用于长期监控、过滤与分发多来源消息。
+Telegram AutoTG Toward 是一个以 WebUI 为核心的 Telegram 转发中控平台，重点是群组间转发的便捷操作，而不只是 RSS 订阅。
+
+## 为什么这不是普通 RSS 工具
+
+- 新建规则即开即用：在 WebUI 打开“新建规则”弹窗后，直接填写 `source link / source_chat_id / target_chat_id` 即可落地转发规则。
+- 转发操作可视化：规则创建、编辑、启停、过滤和测试全部在同一页面完成，不依赖命令行。
+- 集群化规则管理：支持多规则并行和规则同步（`enable_sync`），适合多群组、多目标的集中管理。
+- Bot + Web 联动：Web 端可直接下发测试消息到指定 `chat_id`，同时保留 Bot 侧快捷操作能力。
+
+## UI 重点展示（真实页面截图）
+
+> 以下截图由当前仓库模板实时渲染得到，展示的是本项目实际 WebUI。
+
+### 1) 新建规则后可直接操作转发窗口（支持 link/chat_id）
+
+![新建规则转发窗口](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/ui_real/ui_new_rule_forward_real.png)
+
+### 2) Bot + Web 联动控制（Web 发测试消息到指定 chat_id）
+
+![Bot 与 Web 联动](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/ui_real/ui_bot_web_linkage_real.png)
+
+### 3) 规则集群管理看板（规则列表、状态、统计）
+
+![规则集群管理看板](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/ui_real/ui_dashboard_real.png)
+
+### 4) 首次接入流程（登录/注册/向导）
+
+![WebUI 登录页](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/ui_real/ui_login_real.png)
+
+![WebUI 注册页](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/ui_real/ui_register_real.png)
+
+![Setup Wizard](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/ui_real/ui_setup_wizard_real.png)
 
 ## 项目归属与维护
 
 - 官方仓库：`https://github.com/leduchuong48-byte/telegram_autotgtoward`
 - 官方镜像：`https://hub.docker.com/r/leduchuong/telegram_chanel_autotoward`
 - 维护者：`@leduchuong48-byte`
-- 本仓库的元数据、说明文档与发布信息均以本项目为准，不继承第三方模板文案。
 
 ## 核心能力
 
-- WebUI 管理：登录、配置编辑、日志查看、系统状态监控。
-- Setup Wizard：在页面内完成 Telegram 授权，不依赖命令行登录。
+- WebUI 管理：配置编辑、规则管理、日志查看、系统状态。
+- Telegram 授权向导：页面内完成登录与会话初始化。
 - 规则化转发：关键词/正则/媒体过滤、替换模板、延迟处理。
-- AI 处理：按配置接入 OpenAI / Gemini / DeepSeek / Qwen / Grok / Claude。
-- RSS 子系统：订阅规则、仪表盘、Feed 输出与媒体处理。
-- 运行稳定性：支持配置热重载、接口健康检查和状态查询。
-
-## UI 界面展示
-
-> 以下截图基于当前仓库模板实时渲染，展示本项目实际 WebUI 结构与交互页面。
-
-### WebUI 登录页
-
-![WebUI 登录页](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/ui_real/ui_login_real.png)
-
-### WebUI 注册页
-
-![WebUI 注册页](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/ui_real/ui_register_real.png)
-
-### Telegram 登录向导（Setup Wizard）
-
-![Setup Wizard](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/ui_real/ui_setup_wizard_real.png)
-
-### RSS 仪表盘（规则管理）
-
-![RSS 仪表盘](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/ui_real/ui_dashboard_real.png)
-
-## 特色功能
-
-- 全流程 WebUI：初始化、配置、状态监控、日志排查一站式完成。
-- Bot 快捷操作：可在 Bot 内快速调整转发模式、AI/媒体/推送策略。
-- NAS/HomeLab 友好：适配长期运行场景，支持 Docker/Compose 一键部署。
+- Bot/Web 双通道：Bot 命令与 Web 控制台联动管理。
+- AI 处理：可接入 OpenAI / Gemini / DeepSeek / Qwen / Grok / Claude。
+- RSS 子系统：作为可选能力用于订阅与分发，不影响核心转发流程。
 
 ## For Portainer/Synology Users
 

@@ -1,1 +1,1 @@
-⚡ WebUI-first Telegram forwarding + RSS platform by leduchuong for NAS/HomeLab. 🚀
+🤖 Telegram forward hub: WebUI link/chat_id rules, Bot+Web sync, NAS self-hosted, lightweight. 🚀
