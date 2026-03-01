@@ -10,8 +10,8 @@ Telegram AutoTG Toward is a WebUI-first Telegram forwarding control center focus
 
 ## Release Notes
 
-- `v3.0`: Fixed unstable forwarding behavior for long-running workloads.
-- `v3.0`: Fixed an issue where messages failing filters could still be forwarded in user mode; strict filtering is now default.
+- `v3.1`: Fixed unstable forwarding behavior for long-running workloads.
+- `v3.1`: Fixed an issue where messages failing filters could still be forwarded in user mode; strict filtering is now default.
 
 ## Why This Is Not a Generic RSS Tool
 

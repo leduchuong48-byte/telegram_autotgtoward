@@ -1,11 +1,11 @@
-VERSION = "3.0"
+VERSION = "3.1"
 APP_NAME = "telegram_chanel_autotoward"
 REPO_URL = "https://github.com/leduchuong48-byte/telegram_autotgtoward"
 
 # 版本号说明
 VERSION_INFO = {
     "major": 3,        # 主版本号：重大更新，可能不兼容旧版本
-    "feature": 0,      # 功能版本号：添加重要新功能
+    "feature": 1,      # 功能版本号：添加重要新功能
     "minor": 0,        # 次要版本号：添加小功能或优化
     "patch": 0,        # 补丁版本号：Bug修复和小改动
 }

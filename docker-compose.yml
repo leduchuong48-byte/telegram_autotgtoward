@@ -9,7 +9,7 @@ services:
         PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.tuna.tsinghua.edu.cn/simple}
         PIP_TRUSTED_HOST: ${PIP_TRUSTED_HOST:-pypi.tuna.tsinghua.edu.cn}
     # 本地镜像名（可按需改成你自己的 tag）
-    image: telegram_chanel_autotoward:3.0
+    image: telegram_chanel_autotoward:3.1
     container_name: autotgtoward
     # 如果需要使用 RSS 功能，请取消以下注释
     ports:
