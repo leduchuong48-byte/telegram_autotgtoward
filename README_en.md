@@ -1,6 +1,6 @@
-# Project Name
+# Telegram AutoTG Toward
 
-![Cover or Demo](docs/cover.gif)
+![UI Preview](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/ui_real/ui_dashboard_real.png)
 
 [![Docker Pulls](https://img.shields.io/docker/pulls/leduchuong/ld_tg_downloader?logo=docker&label=Docker%20Pulls&style=flat-square)](https://hub.docker.com/r/leduchuong/ld_tg_downloader)
 [![GitHub Stars](https://img.shields.io/github/stars/leduchuong48-byte/telegram_autotgtoward?style=flat-square)](https://github.com/leduchuong48-byte/telegram_autotgtoward/stargazers)
@@ -14,116 +14,129 @@
 
 > Better alternative to Fluent Reader for E-ink devices.
 
-One sentence describing what this project does.
+Telegram AutoTG Toward is a self-hosted Telegram forwarding control center that combines WebUI rule management, filtering, Bot/Web coordination, and optional RSS workflows into one stable operating stack.
 
 ## Why this tool?
 
-Tired of <slow workflow> and <manual retries>? This tool is built to remove the 3-second lag and frequent failure points that make demos and operations unreliable.
+Many Telegram forwarding tools work for short demos but become fragile in long-running deployments with complex filters, multi-target routing, and media constraints. Version `3.2` focuses on strengthening the overall stability of the project so it is safer to run continuously on NAS and homelab environments.
 
 ## Why This Project Is Useful (Pain Points)
 
-- Pain point 1: The most error-prone or time-consuming part in the old workflow
-- Pain point 2: Cost/maintenance burden of existing solutions
-- Pain point 3: Delivery or collaboration bottlenecks
+- Older setups often become unstable after running for a long time, causing forwarding drift or broken rules.
+- Messages that do not match filters could still be forwarded in user mode, making behavior hard to trust.
+- Bot-only administration is not enough for complex operations, and troubleshooting becomes slow.
 
 ## What the Project Does (Features)
 
-- Core capability A
-- Core capability B
-- Core capability C
+- Create, edit, enable, disable, and test Telegram forwarding rules from a WebUI.
+- Apply keyword, regex, media size, replacement template, and delay-based processing.
+- Coordinate Bot and Web operations while keeping optional RSS and AI integrations available.
+- Ship a more stable Docker image for self-hosted, NAS, and homelab deployments.
+
+## Current Release Highlights
+
+- `v3.2` improves the overall stability of the entire project and is recommended for upgrade.
+- Fixes unstable forwarding behavior in long-running workloads.
+- Fixes the issue where messages missing filter conditions could still be forwarded in user mode; strict filtering is now the default.
+
+## UI Preview
+
+![Dashboard](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/ui_real/ui_dashboard_real.png)
+![New Rule](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/ui_real/ui_new_rule_forward_real.png)
+![Login](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/ui_real/ui_login_real.png)
 
 ## ⚡️ Quick Start (Run in 3 seconds)
 
 ```bash
-docker run --rm -it --pull=always docker.io/leduchuong/ld_tg_downloader:latest
+docker run -d --name telegram_autotgtoward --restart unless-stopped -p 1008:8000 --env-file .env -v $(pwd)/db:/app/db -v $(pwd)/sessions:/app/sessions -v $(pwd)/logs:/app/logs -v $(pwd)/config:/app/config -v $(pwd)/rss/data:/app/rss/data -v $(pwd)/rss/media:/app/rss/media leduchuong/ld_tg_downloader:latest
 ```
-
-> Keep this command copy-paste ready before release; do not require readers to edit parameters.
 
 ## Docker Compose (Portainer / NAS ready)
 
+Copy this into Portainer stacks and hit Deploy. Done.
+
 ```yaml
 services:
-  app:
-    image: docker.io/leduchuong/ld_tg_downloader:latest
-    container_name: autotgtoward_anya
+  autotgtoward:
+    image: leduchuong/ld_tg_downloader:latest
+    container_name: telegram_autotgtoward
     restart: unless-stopped
-    environment:
-      - TZ=UTC
     ports:
-      - "1008:1008"
+      - "1008:8000"
+    env_file:
+      - .env
+    volumes:
+      - ./db:/app/db
+      - ./sessions:/app/sessions
+      - ./logs:/app/logs
+      - ./config:/app/config
+      - ./rss/data:/app/rss/data
+      - ./rss/media:/app/rss/media
 ```
 
 ## GitHub Topics (pick at least 5)
 
-`#nas` `#homelab` `#selfhosted` `#synology` `#unraid` `#eink` `#automation`
+`#nas` `#homelab` `#selfhosted` `#synology` `#unraid` `#telegram` `#automation`
 
-## 📈 Visual Add-ons (Profile Style)
+## Image Overview
 
-<p align="left"> <img src="https://komarev.com/ghpvc/?username=leduchuong48-byte&label=Repo%20views&color=0e75b6&style=flat" alt="leduchuong48-byte" /> </p>
+`leduchuong/ld_tg_downloader` is the official Docker Hub image for Telegram AutoTG Toward. It ships `latest` and `3.2` tags for self-hosted users who want a quick, stable Telegram forwarding deployment.
 
-<p>
-  <img align="left" src="https://github-readme-stats-sigma-five.vercel.app/api/top-langs?username=leduchuong48-byte&show_icons=true&locale=en&layout=compact" alt="top-langs" />
-  <img align="center" src="https://github-readme-stats-sigma-five.vercel.app/api?username=leduchuong48-byte&show_icons=true&locale=en" alt="stats" />
-</p>
+## Configuration
 
-<p><img align="center" src="https://github-readme-streak-stats.herokuapp.com/?user=leduchuong48-byte" alt="streak" /></p>
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=leduchuong48-byte/telegram_autotgtoward&type=Date&theme=dark" />
-  <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=leduchuong48-byte/telegram_autotgtoward&type=Date" />
-  <img alt="Star History" src="https://api.star-history.com/svg?repos=leduchuong48-byte/telegram_autotgtoward&type=Date" />
-</picture>
-
-## 🧰 Languages and Tools
-
-<p align="left"><img src="https://skillicons.dev/icons?i=python,docker,githubactions" alt="tech stack"/></p>
+Before startup, prepare `.env` and set at least `API_ID`, `API_HASH`, `BOT_TOKEN`, `USER_ID`, `INVITE_CODE`, and `JWT_SECRET_KEY`. If you enable RSS, AI providers, or UFB integration, keep the related configuration mounted and persist `db/`, `sessions/`, `logs/`, `config/`, `rss/data/`, and `rss/media/`.
 
 ## Getting Started
 
-### Prerequisites
+### Requirements
 
-- Runtime/language versions
-- Dependency and system requirements
+- Docker 24+ or another compatible container runtime
+- Network access to Telegram APIs
+- A correctly prepared `.env` file
 
-### Installation
+### Install
 
 ```bash
-<install command>
+git clone https://github.com/leduchuong48-byte/telegram_autotgtoward.git
+cd telegram_autotgtoward
+cp .env.example .env
 ```
 
 ### Run
 
 ```bash
-<run command>
+docker compose up -d --build
 ```
 
 ## Usage Example
 
 ```bash
-<example command>
+docker run -d   --name telegram_autotgtoward   --restart unless-stopped   -p 1008:8000   --env-file .env   -v $(pwd)/db:/app/db   -v $(pwd)/sessions:/app/sessions   -v $(pwd)/logs:/app/logs   -v $(pwd)/config:/app/config   -v $(pwd)/rss/data:/app/rss/data   -v $(pwd)/rss/media:/app/rss/media   leduchuong/ld_tg_downloader:3.2
 ```
+
+## Supported Tags and Dockerfile Links
+
+The recommended tags are `latest` and `3.2`. `latest` tracks the current stable release and `3.2` pins this stability-focused release. The build recipe lives in the repository root `Dockerfile`.
 
 ## Where to Get Help
 
 - Issues: https://github.com/leduchuong48-byte/telegram_autotgtoward/issues
 - Discussions: https://github.com/leduchuong48-byte/telegram_autotgtoward/discussions
-- Contact (optional)
 
 ## Maintainers and Contributors
 
-- Maintainer: @leduchuong48-byte
-- Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
-
-## 🤝 Connect
-
-- GitHub: https://github.com/leduchuong48-byte
-- Repository: https://github.com/leduchuong48-byte/telegram_autotgtoward
-
-## Disclaimer
-
-By using this project, you acknowledge and agree to the [Disclaimer](DISCLAIMER.md).
+- Maintainer: [@leduchuong48-byte](https://github.com/leduchuong48-byte)
 
 ## License
 
-For example MIT, see [LICENSE](LICENSE)
+This project is licensed under GPL-3.0. See `LICENSE` for details.
+
+## Disclaimer
+
+By using this project, you agree to the terms in [DISCLAIMER.md](DISCLAIMER.md).
+
+## UI Preview
+
+![UI Screenshot](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/ui_real/ui_dashboard_real.png)
+
+✅ Perfect for Raspberry Pi & Oracle Cloud Free Tier (ARM)
