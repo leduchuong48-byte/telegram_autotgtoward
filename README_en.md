@@ -2,7 +2,7 @@
 
 ![UI Preview](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/ui_real/ui_dashboard_real.png)
 
-[![Docker Pulls](https://img.shields.io/docker/pulls/leduchuong/ld_tg_downloader?logo=docker&label=Docker%20Pulls&style=flat-square)](https://hub.docker.com/r/leduchuong/ld_tg_downloader)
+[![Docker Pulls](https://img.shields.io/docker/pulls/leduchuong/telegram_chanel_autotoward?logo=docker&label=Docker%20Pulls&style=flat-square)](https://hub.docker.com/r/leduchuong/telegram_chanel_autotoward)
 [![GitHub Stars](https://img.shields.io/github/stars/leduchuong48-byte/telegram_autotgtoward?style=flat-square)](https://github.com/leduchuong48-byte/telegram_autotgtoward/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/leduchuong48-byte/telegram_autotgtoward?style=flat-square)](https://github.com/leduchuong48-byte/telegram_autotgtoward/network/members)
 [![GitHub Issues](https://img.shields.io/github/issues/leduchuong48-byte/telegram_autotgtoward?style=flat-square)](https://github.com/leduchuong48-byte/telegram_autotgtoward/issues)
@@ -48,7 +48,7 @@ Many Telegram forwarding tools work for short demos but become fragile in long-r
 ## ⚡️ Quick Start (Run in 3 seconds)
 
 ```bash
-docker run -d --name telegram_autotgtoward --restart unless-stopped -p 1008:8000 --env-file .env -v $(pwd)/db:/app/db -v $(pwd)/sessions:/app/sessions -v $(pwd)/logs:/app/logs -v $(pwd)/config:/app/config -v $(pwd)/rss/data:/app/rss/data -v $(pwd)/rss/media:/app/rss/media leduchuong/ld_tg_downloader:latest
+docker run -d --name telegram_autotgtoward --restart unless-stopped -p 1008:8000 --env-file .env -v $(pwd)/db:/app/db -v $(pwd)/sessions:/app/sessions -v $(pwd)/logs:/app/logs -v $(pwd)/config:/app/config -v $(pwd)/rss/data:/app/rss/data -v $(pwd)/rss/media:/app/rss/media leduchuong/telegram_chanel_autotoward:latest
 ```
 
 ## Docker Compose (Portainer / NAS ready)
@@ -58,7 +58,7 @@ Copy this into Portainer stacks and hit Deploy. Done.
 ```yaml
 services:
   autotgtoward:
-    image: leduchuong/ld_tg_downloader:latest
+    image: leduchuong/telegram_chanel_autotoward:latest
     container_name: telegram_autotgtoward
     restart: unless-stopped
     ports:
@@ -80,7 +80,7 @@ services:
 
 ## Image Overview
 
-`leduchuong/ld_tg_downloader` is the official Docker Hub image for Telegram AutoTG Toward. It ships `latest` and `3.2` tags for self-hosted users who want a quick, stable Telegram forwarding deployment.
+`leduchuong/telegram_chanel_autotoward` is the official Docker Hub image for Telegram AutoTG Toward. It ships `latest` and `3.2` tags for self-hosted users who want a quick, stable Telegram forwarding deployment.
 
 ## Configuration
 
@@ -111,7 +111,7 @@ docker compose up -d --build
 ## Usage Example
 
 ```bash
-docker run -d   --name telegram_autotgtoward   --restart unless-stopped   -p 1008:8000   --env-file .env   -v $(pwd)/db:/app/db   -v $(pwd)/sessions:/app/sessions   -v $(pwd)/logs:/app/logs   -v $(pwd)/config:/app/config   -v $(pwd)/rss/data:/app/rss/data   -v $(pwd)/rss/media:/app/rss/media   leduchuong/ld_tg_downloader:3.2
+docker run -d   --name telegram_autotgtoward   --restart unless-stopped   -p 1008:8000   --env-file .env   -v $(pwd)/db:/app/db   -v $(pwd)/sessions:/app/sessions   -v $(pwd)/logs:/app/logs   -v $(pwd)/config:/app/config   -v $(pwd)/rss/data:/app/rss/data   -v $(pwd)/rss/media:/app/rss/media   leduchuong/telegram_chanel_autotoward:3.2
 ```
 
 ## Supported Tags and Dockerfile Links

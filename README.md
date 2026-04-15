@@ -2,7 +2,7 @@
 
 ![UI Preview](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/ui_real/ui_dashboard_real.png)
 
-[![Docker Pulls](https://img.shields.io/docker/pulls/leduchuong/ld_tg_downloader?logo=docker&label=Docker%20Pulls&style=flat-square)](https://hub.docker.com/r/leduchuong/ld_tg_downloader)
+[![Docker Pulls](https://img.shields.io/docker/pulls/leduchuong/telegram_chanel_autotoward?logo=docker&label=Docker%20Pulls&style=flat-square)](https://hub.docker.com/r/leduchuong/telegram_chanel_autotoward)
 [![GitHub Stars](https://img.shields.io/github/stars/leduchuong48-byte/telegram_autotgtoward?style=flat-square)](https://github.com/leduchuong48-byte/telegram_autotgtoward/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/leduchuong48-byte/telegram_autotgtoward?style=flat-square)](https://github.com/leduchuong48-byte/telegram_autotgtoward/network/members)
 [![GitHub Issues](https://img.shields.io/github/issues/leduchuong48-byte/telegram_autotgtoward?style=flat-square)](https://github.com/leduchuong48-byte/telegram_autotgtoward/issues)
@@ -48,7 +48,7 @@ Telegram AutoTG Toward 是一个面向自托管场景的 Telegram 转发中控�
 ## ⚡️ Quick Start (Run in 3 seconds)
 
 ```bash
-docker run -d --name telegram_autotgtoward --restart unless-stopped -p 1008:8000 --env-file .env -v $(pwd)/db:/app/db -v $(pwd)/sessions:/app/sessions -v $(pwd)/logs:/app/logs -v $(pwd)/config:/app/config -v $(pwd)/rss/data:/app/rss/data -v $(pwd)/rss/media:/app/rss/media leduchuong/ld_tg_downloader:latest
+docker run -d --name telegram_autotgtoward --restart unless-stopped -p 1008:8000 --env-file .env -v $(pwd)/db:/app/db -v $(pwd)/sessions:/app/sessions -v $(pwd)/logs:/app/logs -v $(pwd)/config:/app/config -v $(pwd)/rss/data:/app/rss/data -v $(pwd)/rss/media:/app/rss/media leduchuong/telegram_chanel_autotoward:latest
 ```
 
 ## Docker Compose（Portainer / NAS 可直接粘贴）
@@ -58,7 +58,7 @@ Copy this into Portainer stacks and hit Deploy. Done.
 ```yaml
 services:
   autotgtoward:
-    image: leduchuong/ld_tg_downloader:latest
+    image: leduchuong/telegram_chanel_autotoward:latest
     container_name: telegram_autotgtoward
     restart: unless-stopped
     ports:
@@ -80,7 +80,7 @@ services:
 
 ## 镜像说明
 
-`leduchuong/ld_tg_downloader` 是 Telegram AutoTG Toward 的官方 Docker Hub 镜像，默认提供 `latest` 和 `3.2` 两个标签，适合希望快速部署稳定版 Telegram 转发系统的自托管用户。
+`leduchuong/telegram_chanel_autotoward` 是 Telegram AutoTG Toward 的官方 Docker Hub 镜像，默认提供 `latest` 和 `3.2` 两个标签，适合希望快速部署稳定版 Telegram 转发系统的自托管用户。
 
 ## 配置说明
 
@@ -111,7 +111,7 @@ docker compose up -d --build
 ## 使用示例
 
 ```bash
-docker run -d   --name telegram_autotgtoward   --restart unless-stopped   -p 1008:8000   --env-file .env   -v $(pwd)/db:/app/db   -v $(pwd)/sessions:/app/sessions   -v $(pwd)/logs:/app/logs   -v $(pwd)/config:/app/config   -v $(pwd)/rss/data:/app/rss/data   -v $(pwd)/rss/media:/app/rss/media   leduchuong/ld_tg_downloader:3.2
+docker run -d   --name telegram_autotgtoward   --restart unless-stopped   -p 1008:8000   --env-file .env   -v $(pwd)/db:/app/db   -v $(pwd)/sessions:/app/sessions   -v $(pwd)/logs:/app/logs   -v $(pwd)/config:/app/config   -v $(pwd)/rss/data:/app/rss/data   -v $(pwd)/rss/media:/app/rss/media   leduchuong/telegram_chanel_autotoward:3.2
 ```
 
 ## 支持的标签与 Dockerfile
