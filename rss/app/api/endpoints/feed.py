@@ -62,7 +62,7 @@ async def root():
     """服务状态检查"""
     return {
         "status": "ok",
-        "service": "TG Forwarder RSS"
+        "service": "Telegram AutoFoward"
     }
 
 @router.get("/rss/feed/{rule_id}")

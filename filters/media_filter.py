@@ -165,6 +165,9 @@ class MediaFilter(BaseFilter):
         # 如果所有媒体都被屏蔽，设置不转发
         if total_media_count > 0 and total_media_count == blocked_media_count:
             logger.info('媒体组中所有媒体都被屏蔽，设置不转发')
+            if not getattr(context, 'stop_reason', None):
+                context.stop_reason = 'media_type'
+                context.stop_reason_detail = 'all media in group blocked by media type filter'
             # 检查是否允许文本通过
             if rule.media_allow_text:
                 logger.info('媒体被屏蔽但允许文本通过')
@@ -175,6 +178,9 @@ class MediaFilter(BaseFilter):
             
         # 如果所有媒体都超限且不发送超限提醒，则设置不转发
         if len(context.skipped_media) > 0 and len(context.media_group_messages) == 0 and not rule.is_send_over_media_size_message:
+            if not getattr(context, 'stop_reason', None):
+                context.stop_reason = 'media_size'
+                context.stop_reason_detail = 'all media in group over size limit and no over-limit message'
             # 检查是否允许文本通过
             if rule.media_allow_text:
                 logger.info('媒体超限但允许文本通过')
@@ -216,6 +222,8 @@ class MediaFilter(BaseFilter):
                     selected_types = self._get_selected_media_types(media_types) if media_types else set()
                     if media_types and await self._is_media_type_blocked(message, media_types, filter_mode, selected_types):
                         logger.info(f'媒体类型被屏蔽，跳过消息 ID={event.message.id}')
+                        context.stop_reason = 'media_type'
+                        context.stop_reason_detail = 'media type blocked by whitelist/blacklist rule'
                         # 检查是否允许文本通过
                         if rule.media_allow_text:
                             logger.info('媒体被屏蔽但允许文本通过')
@@ -230,6 +238,8 @@ class MediaFilter(BaseFilter):
             if rule.enable_extension_filter and event.message.media:
                 if not await self._is_media_extension_allowed(rule, event.message.media):
                     logger.info(f'媒体扩展名被屏蔽，跳过消息 ID={event.message.id}')
+                    context.stop_reason = 'extension'
+                    context.stop_reason_detail = 'media extension blocked'
                     # 检查是否允许文本通过
                     if rule.media_allow_text:
                         logger.info('媒体被屏蔽但允许文本通过')
@@ -262,6 +272,8 @@ class MediaFilter(BaseFilter):
                             break
                 
                 logger.info(f'媒体文件未通过大小筛选 (阈值 {size_limit_mb}MB)')
+                context.stop_reason = 'media_size'
+                context.stop_reason_detail = f'media size {file_size}MB over limit {size_limit_mb}MB'
                 if rule.is_send_over_media_size_message:
                     logger.info(f'是否发送媒体大小超限提醒: {rule.is_send_over_media_size_message}')
                     context.should_forward = True
@@ -287,6 +299,8 @@ class MediaFilter(BaseFilter):
                             file_name = attr.file_name
                             break
                 logger.info(f'媒体文件超过回填大小上限 ({max_cap_mb}MB)')
+                context.stop_reason = 'media_size'
+                context.stop_reason_detail = f'media size {file_size}MB over backfill cap {max_cap_mb}MB'
                 if rule.is_send_over_media_size_message:
                     context.should_forward = True
                 else:
@@ -314,6 +328,8 @@ class MediaFilter(BaseFilter):
                         logger.info(
                             f'媒体时长 {duration_minutes} 分钟未通过筛选 (阈值 {duration_limit} 分钟)'
                         )
+                        context.stop_reason = 'media_duration'
+                        context.stop_reason_detail = f'media duration {duration_minutes}m filtered by threshold {duration_limit}m'
                         if rule.media_allow_text:
                             logger.info('媒体时长不满足但允许文本通过')
                             context.media_blocked = True
@@ -350,6 +366,8 @@ class MediaFilter(BaseFilter):
                     selected_types = self._get_selected_media_types(media_types) if media_types else set()
                     if media_types and self._is_message_type_blocked("text", filter_mode, selected_types):
                         logger.info(f'文本类型被屏蔽，跳过消息 ID={event.message.id}')
+                        context.stop_reason = 'media_type'
+                        context.stop_reason_detail = 'text type blocked by media type filter'
                         context.should_forward = False
                 finally:
                     session.close()

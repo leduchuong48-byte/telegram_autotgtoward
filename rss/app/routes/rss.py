@@ -14,6 +14,7 @@ from models.models import (
     Chat,
     ReplaceRule,
     PushConfig,
+    ProcessedMessage,
 )
 from models.db_operations import DBOperations
 from typing import Optional, List
@@ -32,9 +33,14 @@ import aiohttp
 import pytz
 from utils.constants import RSS_HOST, RSS_PORT, RSS_BASE_URL
 from utils.settings import load_ai_models, load_summary_times, load_delay_times
+from utils.chat_id import normalize_chat_peer_key, build_chat_id_aliases
+from rss.app.core.app_state import build_app_state
 from managers.backfill_manager import (
     BackfillParams,
     start_backfill_task,
+    start_video_forward_task,
+    get_backfill_status,
+    stop_backfill_task_by_rule,
     _get_env_bool,
     _get_env_float,
     _get_env_int,
@@ -469,10 +475,42 @@ def _parse_bool(value, fallback=None):
 
 
 def _get_or_create_chat(db_session, telegram_chat_id: str) -> Chat:
-    chat = db_session.query(Chat).filter(Chat.telegram_chat_id == telegram_chat_id).first()
-    if chat:
-        return chat
-    chat = Chat(telegram_chat_id=telegram_chat_id, name=None)
+    canonical_id = normalize_chat_peer_key(telegram_chat_id)
+    aliases = build_chat_id_aliases(canonical_id)
+    candidates = list(aliases) if aliases else [str(telegram_chat_id).strip()]
+
+    chats = db_session.query(Chat).filter(Chat.telegram_chat_id.in_(candidates)).all()
+    if chats:
+        preferred = None
+        for item in chats:
+            if item.telegram_chat_id == canonical_id:
+                preferred = item
+                break
+        if preferred is None:
+            preferred = chats[0]
+
+        for item in chats:
+            if item.id == preferred.id:
+                continue
+            db_session.query(ForwardRule).filter(ForwardRule.source_chat_id == item.id).update(
+                {ForwardRule.source_chat_id: preferred.id},
+                synchronize_session=False,
+            )
+            db_session.query(ForwardRule).filter(ForwardRule.target_chat_id == item.id).update(
+                {ForwardRule.target_chat_id: preferred.id},
+                synchronize_session=False,
+            )
+            if not preferred.name and item.name:
+                preferred.name = item.name
+            if not preferred.current_add_id and item.current_add_id:
+                preferred.current_add_id = normalize_chat_peer_key(item.current_add_id) or item.current_add_id
+            db_session.delete(item)
+
+        if canonical_id and preferred.telegram_chat_id != canonical_id:
+            preferred.telegram_chat_id = canonical_id
+        return preferred
+
+    chat = Chat(telegram_chat_id=canonical_id or str(telegram_chat_id).strip(), name=None)
     db_session.add(chat)
     db_session.flush()
     return chat
@@ -709,6 +747,7 @@ async def _apply_rule_settings(rule_id: int, payload: dict) -> tuple[bool, str, 
 
 router = APIRouter(prefix="/rss")
 rule_api_router = APIRouter()
+rule_domain_router = APIRouter()
 templates = Jinja2Templates(directory="rss/app/templates")
 db_ops = None
 
@@ -720,6 +759,12 @@ async def init_db_ops():
 
 @router.get("/dashboard", response_class=HTMLResponse)
 async def rss_dashboard(request: Request, user = Depends(get_current_user)):
+    state = build_app_state(bool(user))
+    if not state["auth"]["authenticated"]:
+        return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
+    if not state["routing"]["allow_dashboard"]:
+        return RedirectResponse(url=state["routing"]["default_route"], status_code=status.HTTP_302_FOUND)
+
     db_session = get_session()
     try:
         # 初始化数据库操作对象
@@ -929,33 +974,57 @@ async def delete_rss(rule_id: int, user = Depends(get_current_user)):
     
     db_session = get_session()
     try:
-        # 初始化数据库操作对象
-        db_ops_instance = await init_db_ops()
-        
-        # 删除配置
-        config_deleted = await db_ops_instance.delete_rss_config(db_session, rule_id)
-        
-        if config_deleted:
-            # 删除关联的媒体和数据文件
-            try:
-                logger.info(f"开始删除规则 {rule_id} 的媒体和数据文件")
-                # 构建删除API的URL
-                rss_url = f"http://{RSS_HOST}:{RSS_PORT}/api/rule/{rule_id}"
-                
-                # 调用删除API
-                async with aiohttp.ClientSession() as client_session:
-                    async with client_session.delete(rss_url) as response:
-                        if response.status == 200:
-                            logger.info(f"成功删除规则 {rule_id} 的媒体和数据文件")
-                        else:
-                            response_text = await response.text()
-                            logger.warning(f"删除规则 {rule_id} 的媒体和数据文件失败, 状态码: {response.status}, 响应: {response_text}")
-            except Exception as e:
-                logger.error(f"调用删除媒体文件API时出错: {str(e)}")
-                # 不影响主流程，继续执行
-        
+        target_rule = db_session.query(ForwardRule).filter(ForwardRule.id == rule_id).first()
+        if not target_rule:
+            return RedirectResponse(
+                url="/rss/dashboard?error=规则不存在", 
+                status_code=status.HTTP_302_FOUND
+            )
+
+        # 先删除依赖数据，再删除规则本体
+        db_session.query(ProcessedMessage).filter(ProcessedMessage.rule_id == rule_id).delete(synchronize_session=False)
+        db_session.query(MediaExtensions).filter(MediaExtensions.rule_id == rule_id).delete(synchronize_session=False)
+        db_session.query(MediaTypes).filter(MediaTypes.rule_id == rule_id).delete(synchronize_session=False)
+        db_session.query(Keyword).filter(Keyword.rule_id == rule_id).delete(synchronize_session=False)
+        db_session.query(ReplaceRule).filter(ReplaceRule.rule_id == rule_id).delete(synchronize_session=False)
+        db_session.query(PushConfig).filter(PushConfig.rule_id == rule_id).delete(synchronize_session=False)
+
+        # 删除规则同步关系（双向）
+        db_session.query(RuleSync).filter(RuleSync.rule_id == rule_id).delete(synchronize_session=False)
+        db_session.query(RuleSync).filter(RuleSync.sync_rule_id == rule_id).delete(synchronize_session=False)
+
+        # 删除 RSS 配置及其模式
+        rss_config = db_session.query(RSSConfig).filter(RSSConfig.rule_id == rule_id).first()
+        if rss_config:
+            db_session.query(RSSPattern).filter(RSSPattern.rss_config_id == rss_config.id).delete(synchronize_session=False)
+            db_session.delete(rss_config)
+
+        db_session.delete(target_rule)
+        db_session.commit()
+
+        # 删除关联的媒体和数据文件（非阻塞主流程）
+        try:
+            logger.info(f"开始删除规则 {rule_id} 的媒体和数据文件")
+            rss_url = f"http://{RSS_HOST}:{RSS_PORT}/api/rule/{rule_id}"
+            async with aiohttp.ClientSession() as client_session:
+                async with client_session.delete(rss_url) as response:
+                    if response.status == 200:
+                        logger.info(f"成功删除规则 {rule_id} 的媒体和数据文件")
+                    else:
+                        response_text = await response.text()
+                        logger.warning(f"删除规则 {rule_id} 的媒体和数据文件失败, 状态码: {response.status}, 响应: {response_text}")
+        except Exception as e:
+            logger.error(f"调用删除媒体文件API时出错: {str(e)}")
+
         return RedirectResponse(
-            url="/rss/dashboard?success=RSS配置已删除", 
+            url="/rss/dashboard?success=规则已删除", 
+            status_code=status.HTTP_302_FOUND
+        )
+    except Exception as exc:
+        db_session.rollback()
+        logger.error(f"删除规则失败: rule={rule_id}, err={str(exc)}")
+        return RedirectResponse(
+            url="/rss/dashboard?error=删除规则失败", 
             status_code=status.HTTP_302_FOUND
         )
     finally:
@@ -1221,6 +1290,9 @@ async def create_rule(request: Request, user = Depends(get_current_user)):
     if not source_chat_id or not target_chat_id:
         return JSONResponse({"success": False, "message": "请填写源与目标频道 ID"}, status_code=status.HTTP_400_BAD_REQUEST)
 
+    canonical_source_chat_id = normalize_chat_peer_key(source_chat_id)
+    canonical_target_chat_id = normalize_chat_peer_key(target_chat_id)
+
     db_session = get_session()
     new_rule_id = None
     try:
@@ -1244,7 +1316,7 @@ async def create_rule(request: Request, user = Depends(get_current_user)):
             source_chat_id=source_chat.id,
             target_chat_id=target_chat.id
         )
-        if source_chat_id == target_chat_id:
+        if canonical_source_chat_id and canonical_source_chat_id == canonical_target_chat_id:
             rule.forward_mode = ForwardMode.WHITELIST
             rule.add_mode = AddMode.WHITELIST
 
@@ -1329,7 +1401,7 @@ async def start_rule_backfill(rule_id: int, request: Request, user = Depends(get
     timezone = pytz.timezone(timezone_name)
 
     try:
-        adaptive_throttle = _get_env_bool("BACKFILL_ADAPTIVE_THROTTLE", True)
+        adaptive_throttle = _parse_bool(payload.get("adaptive_throttle"), _get_env_bool("BACKFILL_ADAPTIVE_THROTTLE", True))
         throttle_min_delay = _get_env_float("BACKFILL_THROTTLE_MIN_DELAY", 0.2)
         throttle_max_delay = _get_env_float("BACKFILL_THROTTLE_MAX_DELAY", 6.0)
         throttle_increase_step = _get_env_float("BACKFILL_THROTTLE_INCREASE_STEP", 0.5)
@@ -1412,6 +1484,154 @@ async def start_rule_backfill(rule_id: int, request: Request, user = Depends(get
     return JSONResponse({"success": ok, "message": msg}, status_code=status_code)
 
 
+@rule_api_router.post("/api/rules/{rule_id}/backfill/video-forward")
+async def start_rule_video_forward(rule_id: int, request: Request, user = Depends(get_current_user)):
+    if not user:
+        return JSONResponse({"success": False, "message": "未登录"}, status_code=status.HTTP_401_UNAUTHORIZED)
+
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = None
+
+    if payload is None:
+        payload = {}
+    if not isinstance(payload, dict):
+        return JSONResponse({"success": False, "message": "请求数据无效"}, status_code=status.HTTP_400_BAD_REQUEST)
+
+    db_session = get_session()
+    try:
+        rule = db_session.query(ForwardRule).filter(ForwardRule.id == rule_id).first()
+        if not rule:
+            return JSONResponse({"success": False, "message": "规则不存在"}, status_code=status.HTTP_404_NOT_FOUND)
+        use_bot = bool(rule.use_bot)
+    finally:
+        db_session.close()
+
+    try:
+        batch_size = int(payload.get("batch_size") or 20)
+    except (TypeError, ValueError):
+        batch_size = 20
+
+    try:
+        batch_delay_seconds = float(payload.get("batch_delay_seconds") or 0)
+    except (TypeError, ValueError):
+        batch_delay_seconds = 0.0
+
+    try:
+        message_delay_seconds = float(payload.get("message_delay_seconds") or 0)
+    except (TypeError, ValueError):
+        message_delay_seconds = 0.0
+
+    adaptive_throttle = _parse_bool(payload.get("adaptive_throttle"), _get_env_bool("BACKFILL_ADAPTIVE_THROTTLE", True))
+    throttle_min_delay = _get_env_float("BACKFILL_THROTTLE_MIN_DELAY", 0.2)
+    throttle_max_delay = _get_env_float("BACKFILL_THROTTLE_MAX_DELAY", 6.0)
+    throttle_increase_step = _get_env_float("BACKFILL_THROTTLE_INCREASE_STEP", 0.5)
+    throttle_decrease_step = _get_env_float("BACKFILL_THROTTLE_DECREASE_STEP", 0.2)
+    throttle_cooldown_threshold = _get_env_int("BACKFILL_THROTTLE_COOLDOWN_THRESHOLD", 10)
+
+    params = BackfillParams(
+        mode="all",
+        batch_size=batch_size,
+        batch_delay_seconds=batch_delay_seconds,
+        message_delay_seconds=message_delay_seconds,
+        adaptive_throttle=adaptive_throttle,
+        throttle_min_delay=throttle_min_delay,
+        throttle_max_delay=throttle_max_delay,
+        throttle_increase_step=throttle_increase_step,
+        throttle_decrease_step=throttle_decrease_step,
+        throttle_cooldown_threshold=throttle_cooldown_threshold,
+    )
+
+    try:
+        bot_client = await get_bot_client()
+        user_client = await get_user_client()
+        notify_chat_id = await get_user_id()
+    except Exception as exc:
+        return JSONResponse({"success": False, "message": f"初始化客户端失败: {str(exc)}"}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    forward_client = bot_client if use_bot else user_client
+    ok, msg, _ = await start_video_forward_task(
+        bot_client=bot_client,
+        user_client=user_client,
+        forward_client=forward_client,
+        rule_id=rule_id,
+        params=params,
+        notify_chat_id=notify_chat_id,
+    )
+    status_code = status.HTTP_200_OK if ok else status.HTTP_400_BAD_REQUEST
+    return JSONResponse({"success": ok, "message": msg}, status_code=status_code)
+
+
+@rule_api_router.get("/api/rules/{rule_id}/backfill/status")
+async def get_rule_backfill_status(rule_id: int, user = Depends(get_current_user)):
+    if not user:
+        return JSONResponse({"success": False, "message": "未登录"}, status_code=status.HTTP_401_UNAUTHORIZED)
+
+    db_session = get_session()
+    try:
+        dedup_count = db_session.query(ProcessedMessage).filter(ProcessedMessage.rule_id == rule_id).count()
+    finally:
+        db_session.close()
+
+    status_payload = await get_backfill_status(rule_id=rule_id)
+    task = status_payload.get("task")
+    return JSONResponse({
+        "success": True,
+        "active": bool(status_payload.get("active")),
+        "task": task,
+        "dedup_count": dedup_count,
+    })
+
+
+@rule_api_router.post("/api/rules/{rule_id}/backfill/stop")
+async def stop_rule_backfill(rule_id: int, user = Depends(get_current_user)):
+    if not user:
+        return JSONResponse({"success": False, "message": "未登录"}, status_code=status.HTTP_401_UNAUTHORIZED)
+
+    ok, msg, info = await stop_backfill_task_by_rule(rule_id=rule_id)
+    status_code = status.HTTP_200_OK if ok else status.HTTP_400_BAD_REQUEST
+    return JSONResponse({
+        "success": ok,
+        "message": msg,
+        "rule_id": info.rule_id if info else rule_id,
+    }, status_code=status_code)
+
+
+@rule_api_router.post("/api/rules/{rule_id}/backfill/reset")
+async def reset_rule_backfill_dedup(rule_id: int, user = Depends(get_current_user)):
+    if not user:
+        return JSONResponse({"success": False, "message": "未登录"}, status_code=status.HTTP_401_UNAUTHORIZED)
+
+    status_payload = await get_backfill_status(rule_id=rule_id)
+    if status_payload.get("active"):
+        return JSONResponse({
+            "success": False,
+            "message": "当前规则有回填任务运行中，请先停止后再重置",
+        }, status_code=status.HTTP_409_CONFLICT)
+
+    db_session = get_session()
+    try:
+        deleted = (
+            db_session.query(ProcessedMessage)
+            .filter(ProcessedMessage.rule_id == rule_id)
+            .delete(synchronize_session=False)
+        )
+        db_session.commit()
+    except Exception as exc:
+        db_session.rollback()
+        logger.error(f"重置回填去重记录失败: rule={rule_id}, err={str(exc)}")
+        return JSONResponse({"success": False, "message": "重置失败，请检查日志"}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    finally:
+        db_session.close()
+
+    return JSONResponse({
+        "success": True,
+        "message": f"已清理回填去重记录 {deleted} 条",
+        "deleted": deleted,
+    })
+
+
 @router.post("/filters/{rule_id}")
 async def update_rule_filters(rule_id: int, request: Request, user = Depends(get_current_user)):
     if not user:
@@ -1427,3 +1647,14 @@ async def update_rule_filters(rule_id: int, request: Request, user = Depends(get
 
     success, message, status_code = await _apply_rule_filters(rule_id, payload)
     return JSONResponse({"success": success, "message": message}, status_code=status_code)
+
+
+# 规则主域别名路由（兼容保留 /rss 前缀）
+rule_domain_router.add_api_route("/dashboard", rss_dashboard, methods=["GET"], response_class=HTMLResponse)
+rule_domain_router.add_api_route("/rules", create_rule, methods=["POST"], response_class=JSONResponse)
+rule_domain_router.add_api_route("/rules/{rule_id}", get_rule_detail, methods=["GET"], response_class=JSONResponse)
+rule_domain_router.add_api_route("/rules/{rule_id}", update_rule_detail, methods=["PUT"], response_class=JSONResponse)
+rule_domain_router.add_api_route("/rules/{rule_id}/filters", get_rule_filters, methods=["GET"], response_class=JSONResponse)
+rule_domain_router.add_api_route("/rules/{rule_id}/filters", update_rule_filters, methods=["POST"], response_class=JSONResponse)
+rule_domain_router.add_api_route("/rules/{rule_id}/toggle", toggle_rss, methods=["GET"], response_class=RedirectResponse)
+rule_domain_router.add_api_route("/rules/{rule_id}/delete", delete_rss, methods=["GET"], response_class=RedirectResponse)

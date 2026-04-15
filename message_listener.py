@@ -12,6 +12,7 @@ from telethon.tl import types
 from filters.process import process_forward_rule
 from utils.dedup import build_dedup_key, claim_processed
 from rss.app.core import bot_runtime
+from utils.chat_id import normalize_chat_peer_key, build_chat_id_aliases
 # 加载环境变量
 load_dotenv()
 
@@ -77,7 +78,8 @@ async def handle_user_message(event, user_client, bot_client):
     # logger.info("handle_user_message:开始处理用户消息")
     
     chat = await event.get_chat()
-    chat_id = abs(chat.id)
+    raw_chat_id = getattr(chat, 'id', None)
+    chat_id = normalize_chat_peer_key(raw_chat_id)
     # logger.info(f"handle_user_message:获取到聊天ID: {chat_id}")
 
     # 检查是否频道消息
@@ -120,19 +122,23 @@ async def handle_user_message(event, user_client, bot_client):
     session = get_session()
     try:
         # 查询源聊天
-        source_chat = session.query(Chat).filter(
-            Chat.telegram_chat_id == str(chat_id)
-        ).first()
-        
-        if not source_chat:
+        aliases = build_chat_id_aliases(chat_id)
+        source_chats = session.query(Chat).filter(
+            Chat.telegram_chat_id.in_(aliases or (str(chat_id),))
+        ).all()
+
+        if not source_chats:
             return
-            
+
+        source_chat = next((item for item in source_chats if item.telegram_chat_id == chat_id), source_chats[0])
+        source_chat_ids = [item.id for item in source_chats]
+
         # 添加日志：查询转发规则
         logger.info(f'找到源聊天: {source_chat.name} (ID: {source_chat.id})')
-        
-        # 查找以当前聊天为源的规则
+
+        # 查找以当前聊天为源的规则（兼容历史ID别名）
         rules = session.query(ForwardRule).filter(
-            ForwardRule.source_chat_id == source_chat.id
+            ForwardRule.source_chat_id.in_(source_chat_ids)
         ).all()
         
         if not rules:

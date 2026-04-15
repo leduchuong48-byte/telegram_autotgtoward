@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Telegram Login Wizard</title>
+    <title>Telegram Setup Wizard</title>
     <link rel="manifest" href="/static/manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -25,11 +25,7 @@
             --accent-dark: #0b5ad1;
             --text-muted: rgba(15, 23, 42, 0.6);
         }
-
-        * {
-            box-sizing: border-box;
-        }
-
+        * { box-sizing: border-box; }
         body {
             margin: 0;
             min-height: 100vh;
@@ -41,9 +37,8 @@
             color: #0f172a;
             padding: 24px;
         }
-
         .wizard-card {
-            width: min(520px, 100%);
+            width: min(560px, 100%);
             padding: 28px;
             border-radius: 24px;
             background: var(--glass-bg);
@@ -54,204 +49,229 @@
             flex-direction: column;
             gap: 18px;
         }
-
-        .wizard-header {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
+        .wizard-header { display: flex; flex-direction: column; gap: 8px; }
         .badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.85rem;
-            padding: 6px 12px;
-            border-radius: 999px;
-            background: rgba(15, 23, 42, 0.08);
-            color: #111827;
-            width: fit-content;
+            display: inline-flex; align-items: center; gap: 8px; font-size: 0.85rem;
+            padding: 6px 12px; border-radius: 999px; background: rgba(15, 23, 42, 0.08);
+            color: #111827; width: fit-content;
         }
-
-        .badge i {
-            color: var(--accent);
-        }
-
-        h1 {
-            margin: 0;
-            font-size: 1.6rem;
-        }
-
-        .status-text {
-            color: var(--text-muted);
-            font-size: 0.95rem;
-        }
-
+        .badge i { color: var(--accent); }
+        h1 { margin: 0; font-size: 1.6rem; }
+        .status-text { color: var(--text-muted); font-size: 0.95rem; }
         .step {
-            display: none;
-            flex-direction: column;
-            gap: 14px;
-            padding: 18px;
-            border-radius: 16px;
-            background: rgba(255, 255, 255, 0.8);
-            border: 1px solid rgba(15, 23, 42, 0.08);
+            display: none; flex-direction: column; gap: 14px; padding: 18px; border-radius: 16px;
+            background: rgba(255, 255, 255, 0.8); border: 1px solid rgba(15, 23, 42, 0.08);
         }
-
-        .step.active {
-            display: flex;
-        }
-
-        .step-title {
-            font-weight: 600;
-        }
-
-        label {
-            font-size: 0.9rem;
-            color: var(--text-muted);
-        }
-
+        .step.active { display: flex; }
+        .step-title { font-weight: 600; }
+        label { font-size: 0.9rem; color: var(--text-muted); }
         input {
-            width: 100%;
-            padding: 12px 14px;
-            border-radius: 12px;
-            border: 1px solid rgba(15, 23, 42, 0.15);
-            background: rgba(255, 255, 255, 0.9);
-            font-size: 1rem;
+            width: 100%; padding: 12px 14px; border-radius: 12px;
+            border: 1px solid rgba(15, 23, 42, 0.15); background: rgba(255, 255, 255, 0.9); font-size: 1rem;
         }
-
         input:focus {
-            outline: none;
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(15, 111, 255, 0.15);
+            outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(15, 111, 255, 0.15);
         }
-
         .btn {
-            width: 100%;
-            border: none;
-            border-radius: 12px;
-            padding: 12px 16px;
-            font-size: 0.95rem;
-            font-weight: 600;
-            cursor: pointer;
+            width: 100%; border: none; border-radius: 12px; padding: 12px 16px;
+            font-size: 0.95rem; font-weight: 600; cursor: pointer;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
-
         .btn-primary {
             background: linear-gradient(135deg, var(--accent), var(--accent-dark));
-            color: #ffffff;
-            box-shadow: 0 12px 24px rgba(15, 111, 255, 0.25);
+            color: #ffffff; box-shadow: 0 12px 24px rgba(15, 111, 255, 0.25);
         }
-
-        .btn-primary:hover {
-            transform: translateY(-1px);
-        }
-
+        .btn-primary:hover { transform: translateY(-1px); }
         .hint {
-            font-size: 0.9rem;
-            color: var(--text-muted);
-            padding: 10px 14px;
-            border-radius: 12px;
-            background: rgba(15, 23, 42, 0.05);
+            font-size: 0.9rem; color: var(--text-muted); padding: 10px 14px;
+            border-radius: 12px; background: rgba(15, 23, 42, 0.05);
         }
-
-        .hint.error {
-            color: #b91c1c;
-            background: rgba(248, 113, 113, 0.15);
-        }
+        .hint.error { color: #b91c1c; background: rgba(248, 113, 113, 0.15); }
     </style>
 </head>
 <body>
     <div class="wizard-card">
         <div class="wizard-header">
-            <div class="badge"><i class="bi bi-shield-lock"></i> Telegram Secure Login</div>
-            <h1>Telegram Login Wizard</h1>
-            <div class="status-text" id="statusText">Checking Telegram connection status...</div>
+            <div class="badge"><i class="bi bi-shield-lock"></i> Telegram First-run Setup</div>
+            <h1>Setup Wizard</h1>
+            <div class="status-text" id="statusText">Checking bootstrap status...</div>
+        </div>
+
+        <div class="step" id="stepConfig">
+            <div class="step-title">Step 1 - Configure Telegram API</div>
+            <label for="apiIdInput">API ID</label>
+            <input type="text" id="apiIdInput" placeholder="25565063">
+            <label for="apiHashInput">API HASH</label>
+            <input type="text" id="apiHashInput" placeholder="acef...">
+            <label for="botTokenInput">Bot Token</label>
+            <input type="text" id="botTokenInput" placeholder="123456:ABC...">
+            <label for="userIdInput">Admin USER_ID</label>
+            <input type="text" id="userIdInput" placeholder="7856041838">
+            <label for="phoneInput">Phone (optional, can fill later)</label>
+            <input type="tel" id="phoneInput" placeholder="+86 138****8888" autocomplete="tel">
+            <button class="btn btn-primary" id="saveConfigBtn">Save API Config</button>
         </div>
 
         <div class="step" id="stepPhone">
-            <div class="step-title">Step 1 - Enter phone</div>
-            <label for="phoneInput">Phone number (with country code)</label>
-            <input type="tel" id="phoneInput" placeholder="+86 138****8888" autocomplete="tel">
+            <div class="step-title">Step 2 - Verify Telegram user</div>
+            <label for="phoneVerifyInput">Phone number (with country code)</label>
+            <input type="tel" id="phoneVerifyInput" placeholder="+86 138****8888" autocomplete="tel">
             <button class="btn btn-primary" id="sendCodeBtn">Send code</button>
         </div>
 
         <div class="step" id="stepCode">
-            <div class="step-title">Step 2 - Enter code</div>
+            <div class="step-title">Step 3 - Enter code</div>
             <label for="codeInput">Telegram verification code</label>
             <input type="text" id="codeInput" placeholder="12345" inputmode="numeric" autocomplete="one-time-code">
             <button class="btn btn-primary" id="verifyCodeBtn">Verify code</button>
         </div>
 
         <div class="step" id="stepPassword">
-            <div class="step-title">Step 3 - Enter 2FA password</div>
+            <div class="step-title">Step 4 - Enter 2FA password</div>
             <label for="passwordInput">Two-factor password</label>
             <input type="password" id="passwordInput" placeholder="Enter Telegram 2FA password" autocomplete="current-password">
             <button class="btn btn-primary" id="verifyPasswordBtn">Finish login</button>
         </div>
 
-        <div class="hint" id="hintBox">Enter your phone number to start.</div>
+        <div class="hint" id="hintBox">Follow the steps to finish initial setup.</div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/axios@1.6.8/dist/axios.min.js"></script>
     <script>
         const statusText = document.getElementById('statusText');
         const hintBox = document.getElementById('hintBox');
+        const stepConfig = document.getElementById('stepConfig');
         const stepPhone = document.getElementById('stepPhone');
         const stepCode = document.getElementById('stepCode');
         const stepPassword = document.getElementById('stepPassword');
+
+        const saveConfigBtn = document.getElementById('saveConfigBtn');
         const sendCodeBtn = document.getElementById('sendCodeBtn');
         const verifyCodeBtn = document.getElementById('verifyCodeBtn');
         const verifyPasswordBtn = document.getElementById('verifyPasswordBtn');
 
         function showHint(message, type) {
-            if (!hintBox) {
-                return;
-            }
             hintBox.textContent = message;
             hintBox.className = 'hint' + (type ? ' ' + type : '');
         }
 
-        function setActiveStep(status) {
-            stepPhone.classList.remove('active');
-            stepCode.classList.remove('active');
-            stepPassword.classList.remove('active');
+        function activate(step) {
+            [stepConfig, stepPhone, stepCode, stepPassword].forEach(function(node) {
+                node.classList.remove('active');
+            });
+            step.classList.add('active');
+        }
 
+        function setByAppState(payload) {
+            const phase = payload && payload.phase ? payload.phase : 'telegram_config_required';
+            const routing = (payload && payload.routing) || {};
+            const bootstrap = (payload && payload.bootstrap) || {};
+            const telegram = (payload && payload.telegram) || {};
+
+            if (phase === 'unauthenticated') {
+                window.location.href = '/login';
+                return;
+            }
+
+            if (routing.allow_setup === false && routing.default_route) {
+                window.location.href = routing.default_route;
+                return;
+            }
+
+            const status = telegram.auth_status || 'config_missing';
+            const configComplete = !!bootstrap.config_complete;
+
+            if (!configComplete || status === 'config_missing' || status === 'config_invalid') {
+                activate(stepConfig);
+                showHint('Please fill Telegram API config first.');
+                return;
+            }
             if (status === 'waiting_for_code') {
-                stepCode.classList.add('active');
-                showHint('Enter the code you received in Telegram.');
+                activate(stepCode);
+                showHint('Enter the verification code from Telegram.');
                 return;
             }
             if (status === 'waiting_for_password') {
-                stepPassword.classList.add('active');
-                showHint('2FA detected. Enter your password.');
+                activate(stepPassword);
+                showHint('2FA enabled. Please enter your password.');
                 return;
             }
-            stepPhone.classList.add('active');
-            showHint('Enter your phone number to start.');
+            if (status === 'logged_in' && routing.default_route) {
+                window.location.href = routing.default_route;
+                return;
+            }
+            activate(stepPhone);
+            showHint('Send a phone verification code to continue.');
+        }
+
+        async function preloadConfig() {
+            try {
+                const resp = await axios.get('/api/config/global');
+                const tg = (resp.data && resp.data.telegram) || {};
+                document.getElementById('apiIdInput').value = tg.api_id || '';
+                document.getElementById('apiHashInput').value = tg.api_hash || '';
+                document.getElementById('userIdInput').value = tg.user_id || '';
+                const phone = tg.phone || '';
+                document.getElementById('phoneInput').value = phone;
+                document.getElementById('phoneVerifyInput').value = phone;
+            } catch (err) {
+                // ignore preload errors
+            }
         }
 
         async function fetchStatus() {
             try {
-                const response = await axios.get('/api/tg/status');
-                const status = response.data && response.data.status ? response.data.status : 'waiting_for_phone';
-                if (statusText) {
-                    statusText.textContent = status === 'logged_in'
-                        ? 'Telegram is logged in, redirecting...'
-                        : 'Current status: ' + status.replaceAll('_', ' ');
-                }
-                if (status === 'logged_in') {
-                    window.location.href = '/rss/dashboard';
+                const resp = await axios.get('/api/app/state');
+                const payload = resp.data || {};
+                const phase = payload.phase || 'telegram_config_required';
+                const authStatus = (payload.telegram && payload.telegram.auth_status) || 'config_missing';
+                statusText.textContent = 'Current phase: ' + phase.replaceAll('_', ' ') + ' / ' + authStatus.replaceAll('_', ' ');
+                setByAppState(payload);
+            } catch (error) {
+                if (error && error.response && error.response.status === 401) {
+                    window.location.href = '/login';
                     return;
                 }
-                setActiveStep(status);
+                showHint('State check failed. Try again.', 'error');
+            }
+        }
+
+        async function saveApiConfig() {
+            const payload = {
+                api_id: document.getElementById('apiIdInput').value.trim(),
+                api_hash: document.getElementById('apiHashInput').value.trim(),
+                bot_token: document.getElementById('botTokenInput').value.trim(),
+                user_id: document.getElementById('userIdInput').value.trim(),
+                phone: document.getElementById('phoneInput').value.trim()
+            };
+
+            if (!payload.api_id || !payload.api_hash || !payload.bot_token || !payload.user_id) {
+                showHint('API_ID, API_HASH, BOT_TOKEN, USER_ID are required.', 'error');
+                return;
+            }
+
+            saveConfigBtn.disabled = true;
+            try {
+                await axios.patch('/api/bootstrap/telegram-config', payload);
+                document.getElementById('phoneVerifyInput').value = payload.phone;
+                showHint('Telegram API config saved. Continue with phone verification.');
+                await fetchStatus();
             } catch (error) {
-                showHint('Status check failed. Try again.', 'error');
+                if (error && error.response && error.response.status === 401) {
+                    window.location.href = '/login';
+                    return;
+                }
+                const message = error && error.response && error.response.data && error.response.data.detail
+                    ? error.response.data.detail
+                    : 'Failed to save API config';
+                showHint(message, 'error');
+            } finally {
+                saveConfigBtn.disabled = false;
             }
         }
 
         async function sendPhone() {
-            const phoneInput = document.getElementById('phoneInput');
-            const phone = phoneInput ? phoneInput.value.trim() : '';
+            const phone = document.getElementById('phoneVerifyInput').value.trim();
             if (!phone) {
                 showHint('Phone number required.', 'error');
                 return;
@@ -264,7 +284,7 @@
                     window.location.href = '/rss/dashboard';
                     return;
                 }
-                setActiveStep('waiting_for_code');
+                activate(stepCode);
             } catch (error) {
                 const message = error && error.response && error.response.data && error.response.data.detail
                     ? error.response.data.detail
@@ -276,8 +296,7 @@
         }
 
         async function verifyCode() {
-            const codeInput = document.getElementById('codeInput');
-            const code = codeInput ? codeInput.value.trim() : '';
+            const code = document.getElementById('codeInput').value.trim();
             if (!code) {
                 showHint('Verification code required.', 'error');
                 return;
@@ -287,14 +306,13 @@
                 const response = await axios.post('/api/tg/auth/code', { code });
                 const status = response.data && response.data.status;
                 if (status === '2fa_required') {
-                    setActiveStep('waiting_for_password');
+                    activate(stepPassword);
                     return;
                 }
                 if (status === 'success') {
                     window.location.href = '/rss/dashboard';
                     return;
                 }
-                setActiveStep('waiting_for_code');
             } catch (error) {
                 const message = error && error.response && error.response.data && error.response.data.detail
                     ? error.response.data.detail
@@ -306,8 +324,7 @@
         }
 
         async function verifyPassword() {
-            const passwordInput = document.getElementById('passwordInput');
-            const password = passwordInput ? passwordInput.value.trim() : '';
+            const password = document.getElementById('passwordInput').value.trim();
             if (!password) {
                 showHint('2FA password required.', 'error');
                 return;
@@ -320,7 +337,6 @@
                     window.location.href = '/rss/dashboard';
                     return;
                 }
-                showHint('Continue the login flow.');
             } catch (error) {
                 const message = error && error.response && error.response.data && error.response.data.detail
                     ? error.response.data.detail
@@ -331,16 +347,12 @@
             }
         }
 
-        if (sendCodeBtn) {
-            sendCodeBtn.addEventListener('click', sendPhone);
-        }
-        if (verifyCodeBtn) {
-            verifyCodeBtn.addEventListener('click', verifyCode);
-        }
-        if (verifyPasswordBtn) {
-            verifyPasswordBtn.addEventListener('click', verifyPassword);
-        }
+        saveConfigBtn.addEventListener('click', saveApiConfig);
+        sendCodeBtn.addEventListener('click', sendPhone);
+        verifyCodeBtn.addEventListener('click', verifyCode);
+        verifyPasswordBtn.addEventListener('click', verifyPassword);
 
+        preloadConfig();
         fetchStatus();
         setInterval(fetchStatus, 3000);
     </script>

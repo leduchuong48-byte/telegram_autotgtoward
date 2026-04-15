@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
 
 from .auth import get_current_user
 from ..core.config_manager import config_manager
@@ -41,6 +42,41 @@ async def reload_config(user = Depends(get_current_user)):
     return {"success": True, "message": "Config reloaded"}
 
 
+
+
+class InviteCodePayload(BaseModel):
+    invite_code: str
+
+
+@router.get("/api/config/invite-code")
+async def get_invite_code(user = Depends(get_current_user)):
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
+    return {"invite_code": config_manager.get_invite_code()}
+
+
+@router.patch("/api/config/invite-code")
+async def update_invite_code(payload: InviteCodePayload, user = Depends(get_current_user)):
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
+
+    try:
+        code = config_manager.set_invite_code(payload.invite_code)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+
+    return {"success": True, "invite_code": code}
+
+
+@router.post("/api/config/invite-code/rotate")
+async def rotate_invite_code(user = Depends(get_current_user)):
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
+
+    code = config_manager.rotate_invite_code()
+    return {"success": True, "invite_code": code}
+
+
 @router.get("/api/config/global")
 async def get_global_config(user = Depends(get_current_user)):
     if not user:
@@ -60,6 +96,7 @@ async def get_global_config(user = Depends(get_current_user)):
             "api_id": telegram.get("api_id", ""),
             "api_hash": telegram.get("api_hash", ""),
             "phone": telegram.get("phone", ""),
+            "user_id": telegram.get("user_id", ""),
             "bot_token_set": bool(telegram.get("bot_token")),
         },
         "ai_service": {
@@ -137,6 +174,7 @@ async def update_global_config(request: Request, user = Depends(get_current_user
     _maybe_set(telegram, "api_id", telegram_payload.get("api_id"))
     _maybe_set(telegram, "api_hash", telegram_payload.get("api_hash"))
     _maybe_set(telegram, "phone", telegram_payload.get("phone"))
+    _maybe_set(telegram, "user_id", telegram_payload.get("user_id"))
 
     bot_token_value = telegram_payload.get("bot_token")
     if bot_token_value and not _is_masked_value(bot_token_value):
@@ -191,6 +229,7 @@ async def update_settings(request: Request, user = Depends(get_current_user)):
     _maybe_set(telegram, "api_hash", telegram_payload.get("api_hash"))
     _maybe_set(telegram, "bot_token", telegram_payload.get("bot_token"))
     _maybe_set(telegram, "phone", telegram_payload.get("phone"))
+    _maybe_set(telegram, "user_id", telegram_payload.get("user_id"))
 
     if "enabled" in ai_payload:
         enabled_value = _parse_bool(ai_payload.get("enabled"))

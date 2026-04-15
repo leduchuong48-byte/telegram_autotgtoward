@@ -12,6 +12,22 @@ class FilterChain:
     def __init__(self):
         """初始化过滤器链"""
         self.filters = []
+
+    @staticmethod
+    def _reason_from_filter_name(name: str) -> str:
+        mapping = {
+            'KeywordFilter': 'keyword',
+            'MediaFilter': 'media_type',
+            'AIFilter': 'ai_blocked',
+            'RSSFilter': 'filter_chain_blocked',
+            'SenderFilter': 'forward_failed',
+            'ReplyFilter': 'reply_failed',
+            'PushFilter': 'push_failed',
+            'EditFilter': 'edit_failed',
+            'DelayFilter': 'delayed',
+            'DeleteOriginalFilter': 'delete_original',
+        }
+        return mapping.get(name, 'filter_chain_blocked')
         
     def add_filter(self, filter_obj):
         """
@@ -36,7 +52,7 @@ class FilterChain:
             rule: 转发规则
             
         Returns:
-            bool: 表示处理是否成功
+            dict: {ok, stop_reason, stop_reason_detail}
         """
         # 创建消息上下文
         context = MessageContext(client, event, chat_id, rule)
@@ -47,13 +63,43 @@ class FilterChain:
         for filter_obj in self.filters:
             try:
                 should_continue = await filter_obj.process(context)
+                if getattr(context, 'should_forward', True) is False:
+                    if not getattr(context, 'stop_reason', None):
+                        context.stop_reason = self._reason_from_filter_name(filter_obj.name)
+                        context.stop_reason_detail = f'{filter_obj.name} set should_forward=false'
+                    if not getattr(context, 'stop_stage', None):
+                        context.stop_stage = filter_obj.name
                 if not should_continue:
+                    if not getattr(context, 'stop_reason', None):
+                        context.stop_reason = self._reason_from_filter_name(filter_obj.name)
+                    if not getattr(context, 'stop_reason_detail', None):
+                        context.stop_reason_detail = f'{filter_obj.name} stopped processing chain'
+                    if not getattr(context, 'stop_stage', None):
+                        context.stop_stage = filter_obj.name
                     logger.info(f"过滤器 {filter_obj.name} 中断了处理链")
-                    return False
+                    return {
+                        "ok": False,
+                        "stop_reason": getattr(context, 'stop_reason', None),
+                        "stop_reason_detail": getattr(context, 'stop_reason_detail', ''),
+                        "stop_stage": getattr(context, 'stop_stage', ''),
+                    }
             except Exception as e:
                 logger.error(f"过滤器 {filter_obj.name} 处理出错: {str(e)}")
                 context.errors.append(f"过滤器 {filter_obj.name} 错误: {str(e)}")
-                return False
+                context.stop_reason = 'exception'
+                context.stop_reason_detail = f'{filter_obj.name} exception: {str(e)}'
+                context.stop_stage = filter_obj.name
+                return {
+                    "ok": False,
+                    "stop_reason": context.stop_reason,
+                    "stop_reason_detail": context.stop_reason_detail,
+                    "stop_stage": context.stop_stage,
+                }
         
         logger.info("过滤器链处理完成")
-        return True 
+        return {
+            "ok": True,
+            "stop_reason": None,
+            "stop_reason_detail": '',
+            "stop_stage": None,
+        }

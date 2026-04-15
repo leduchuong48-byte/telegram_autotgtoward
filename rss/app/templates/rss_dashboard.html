@@ -1,14 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <script>
-        (function() {
-            const token = localStorage.getItem('auth_token');
-            if (!token) {
-                window.location.href = '/login';
-            }
-        })();
-    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0b1220">
@@ -23,7 +15,7 @@
             });
         }
     </script>
-    <title>RSS Bot 仪表盘</title>
+    <title>Telegram AutoFoward 仪表盘</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
@@ -355,6 +347,34 @@
             to { opacity: 1; transform: translateY(0) scale(1); }
         }
 
+        
+        .lifecycle-banner {
+            margin: 0 26px;
+            margin-top: 14px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            padding: 10px 14px;
+            font-size: 13px;
+            display: none;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .lifecycle-banner.info {
+            background: rgba(10, 132, 255, 0.16);
+            border-color: rgba(10, 132, 255, 0.35);
+        }
+
+        .lifecycle-banner.warning {
+            background: rgba(255, 159, 10, 0.14);
+            border-color: rgba(255, 159, 10, 0.38);
+        }
+
+        .lifecycle-banner.error {
+            background: rgba(255, 59, 48, 0.14);
+            border-color: rgba(255, 59, 48, 0.38);
+        }
+
         @media (max-width: 768px) {
             body { padding: 12px; }
             .navbar-custom {
@@ -378,7 +398,7 @@
         <div class="navbar-custom">
             <div class="brand">
                 <span class="brand-badge"><i class="bi bi-broadcast"></i></span>
-                <span>RSS Bot</span>
+                <span>Telegram AutoFoward</span>
             </div>
             <div class="nav-actions">
                 <div class="status-pill">
@@ -393,6 +413,8 @@
                 </a>
             </div>
         </div>
+
+        <div class="lifecycle-banner" id="lifecycleBanner"></div>
 
         <div class="container-fluid py-4">
             <div class="stats-grid">
@@ -504,6 +526,9 @@
                         <li class="nav-item" role="presentation">
                             <button class="nav-link" data-bs-toggle="tab" data-bs-target="#settingsAI" type="button" role="tab">AI Service</button>
                         </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#settingsSafety" type="button" role="tab">安全与维护</button>
+                        </li>
                     </ul>
                     <div class="tab-content pt-3">
                         <div class="tab-pane fade show active" id="settingsTelegram" role="tabpanel">
@@ -518,12 +543,29 @@
                                         <input type="text" class="form-control" id="tgApiHash">
                                     </div>
                                     <div class="col-md-4">
+                                        <label class="form-label" for="tgUserId">USER_ID</label>
+                                        <input type="text" class="form-control" id="tgUserId">
+                                    </div>
+                                    <div class="col-md-4">
                                         <label class="form-label" for="tgPhone">Phone</label>
                                         <input type="text" class="form-control" id="tgPhone" placeholder="+86...">
                                     </div>
                                     <div class="col-12">
                                         <label class="form-label" for="tgBotToken">Bot Token</label>
-                                        <input type="password" class="form-control" id="tgBotToken" placeholder="留空保留现有">
+                                        <input type="password" class="form-control" id="tgBotToken" placeholder="未修改请保留 ******，修改时填写新 Token">
+                                    </div>
+                                    <div class="col-md-8">
+                                        <label class="form-label" for="inviteCodeInput">邀请码</label>
+                                        <input type="text" class="form-control" id="inviteCodeInput" placeholder="管理员可修改邀请码">
+                                    </div>
+                                    <div class="col-md-4 d-flex align-items-end">
+                                        <button type="button" class="btn btn-outline-light w-100" id="saveInviteCodeBtn">保存邀请码</button>
+                                    </div>
+                                    <div class="col-12 d-flex justify-content-end">
+                                        <button type="button" class="btn btn-outline-danger" id="rotateInviteCodeBtn">删除并生成新邀请码</button>
+                                    </div>
+                                    <div class="col-12 text-muted small">
+                                        首次配置后，建议通过“替换 Telegram 凭据”进行高风险字段更新；替换后会提示安全重启。
                                     </div>
                                 </div>
                                 <div class="mt-3 text-muted" id="tgSessionInfo">Session: --</div>
@@ -589,9 +631,21 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="tab-pane fade" id="settingsSafety" role="tabpanel">
+                            <div class="section-card">
+                                <h6 class="mb-2">高风险操作</h6>
+                                <div class="text-muted small mb-3">这些操作会影响 Telegram 连接状态。例行升级应保持 session，不会要求重复登录。</div>
+                                <div class="d-flex flex-wrap gap-2 mb-2">
+                                    <button type="button" class="btn btn-outline-warning" id="resetTelegramSessionBtn">重置 Telegram 会话</button>
+                                    <button type="button" class="btn btn-outline-danger" id="replaceTelegramCredsBtn">替换 Telegram 凭据</button>
+                                    <button type="button" class="btn btn-outline-light" id="requestRestartBtn">安全重启容器</button>
+                                </div>
+                                <div class="text-muted small">说明：仅 BOT_TOKEN 变更将优先采用 bot 会话重置，不影响用户账号会话。</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer">
+                <div class="modal-footer d-flex flex-wrap gap-2 justify-content-end">
                     <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">取消</button>
                     <button type="button" class="btn btn-primary" id="saveSettingsBtn">保存并重载</button>
                 </div>
@@ -624,7 +678,8 @@
                         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabMedia">媒体</button></li>
                         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabAI">AI</button></li>
                         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabStyle">修饰</button></li>
-                        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabOps">运维</button></li>
+                        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabAdvanced">高级</button></li>
+                        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabRuntime">运行</button></li>
                     </ul>
                     <div class="tab-content pt-3">
                         <div class="tab-pane fade show active" id="tabBasic">
@@ -1013,7 +1068,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="tab-pane fade" id="tabOps">
+                        <div class="tab-pane fade" id="tabAdvanced">
                             <div class="section-card">
                                 <div class="row g-3">
                                     <div class="col-md-4">
@@ -1071,7 +1126,10 @@
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                        <div class="tab-pane fade" id="tabRuntime">
                             <div class="section-card">
+                                <div class="small text-muted mb-2">回填会复用当前规则过滤链（关键字/替换/媒体/AI/推送/去重）。</div>
                                 <div class="row g-3">
                                     <div class="col-md-3">
                                         <label class="form-label" for="backfill_mode">回填模式</label>
@@ -1094,16 +1152,69 @@
                                         <input type="text" class="form-control" id="backfill_end" placeholder="2025-01-02 23:59">
                                     </div>
                                 </div>
-                                <button class="btn btn-outline-light btn-sm mt-3" type="button" onclick="startRuleBackfill()">
-                                    <i class="bi bi-clock-history"></i> 开始回填
-                                </button>
+                                <div class="mt-3">
+                                    <button class="btn btn-outline-light btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#backfillAdvancedPanel" aria-expanded="false" aria-controls="backfillAdvancedPanel">
+                                        <i class="bi bi-sliders"></i> 高级选项
+                                    </button>
+                                </div>
+                                <div class="collapse mt-3" id="backfillAdvancedPanel">
+                                    <div class="row g-3">
+                                        <div class="col-md-3">
+                                            <label class="form-label" for="backfill_batch_size">批大小</label>
+                                            <input type="number" class="form-control" id="backfill_batch_size" min="1" step="1" value="20">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label" for="backfill_batch_delay_seconds">批间隔(秒)</label>
+                                            <input type="number" class="form-control" id="backfill_batch_delay_seconds" min="0" step="0.1" value="0">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label" for="backfill_message_delay_seconds">消息间隔(秒)</label>
+                                            <input type="number" class="form-control" id="backfill_message_delay_seconds" min="0" step="0.1" value="0">
+                                        </div>
+                                        <div class="col-md-3 d-flex align-items-end">
+                                            <div class="form-check form-switch mb-2">
+                                                <input class="form-check-input" type="checkbox" id="backfill_adaptive_throttle" checked>
+                                                <label class="form-check-label" for="backfill_adaptive_throttle">自适应节流</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mt-3" id="backfillStatusBox">
+                                    <div class="small text-muted">任务状态：<span id="backfillStatusText">未启动</span></div>
+                                    <div class="small text-muted" id="backfillProgressText">已扫描 0 / 已处理 0 / 已跳过 0 / 未转发 0</div>
+                                    <div class="small text-muted" id="backfillMetaText">去重记录：0</div>
+                                    <div class="small text-muted mt-2" id="backfillOptimizationHint">优化建议：暂无</div>
+                                    <div class="mt-2">
+                                        <div class="small text-muted mb-1">主要跳过原因</div>
+                                        <ul class="small mb-2" id="backfillReasonList"></ul>
+                                        <div class="small text-muted mb-1">最近样本</div>
+                                        <ul class="small mb-0" id="backfillSampleList"></ul>
+                                    </div>
+                                </div>
+                                <div class="mt-3 d-flex gap-2 flex-wrap">
+                                    <button class="btn btn-outline-light btn-sm" type="button" onclick="startRuleBackfill()">
+                                        <i class="bi bi-clock-history"></i> 开始回填
+                                    </button>
+                                    <button class="btn btn-outline-info btn-sm" type="button" onclick="startRuleVideoForward()">
+                                        <i class="bi bi-camera-reels"></i> 转发全部视频
+                                    </button>
+                                    <button class="btn btn-outline-warning btn-sm" type="button" onclick="stopRuleBackfill()">
+                                        <i class="bi bi-stop-circle"></i> 停止回填
+                                    </button>
+                                    <button class="btn btn-outline-danger btn-sm" type="button" onclick="resetRuleBackfillDedup()">
+                                        <i class="bi bi-eraser"></i> 清理回填去重
+                                    </button>
+                                    <button class="btn btn-outline-light btn-sm" type="button" onclick="refreshRuleBackfillStatus()">
+                                        <i class="bi bi-arrow-repeat"></i> 刷新状态
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">取消</button>
-                    <button type="button" class="btn btn-primary" onclick="saveRuleDetail()">保存规则</button>
+                    <button type="button" class="btn btn-primary" id="saveRuleBtn" onclick="saveRuleDetail()">保存规则</button>
                 </div>
             </div>
         </div>
@@ -1173,6 +1284,7 @@
         let logLines = [];
         let logTimer = null;
         let logAutoScroll = true;
+        let backfillStatusTimer = null;
 
         function showToast(message, type = 'success') {
             Swal.fire({
@@ -1189,32 +1301,59 @@
         }
 
         function initAxiosInterceptors() {
-            if (window.__apiInterceptorsInitialized) {
-                return;
-            }
-            window.__apiInterceptorsInitialized = true;
-            axios.interceptors.request.use((config) => {
-                const token = localStorage.getItem('auth_token');
-                if (token) {
-                    config.headers = config.headers || {};
-                    config.headers.Authorization = `Bearer ${token}`;
-                }
-                return config;
-            });
-            axios.interceptors.response.use(
-                (response) => response,
-                (error) => {
-                    if (error.response && error.response.status === 401) {
-                        localStorage.removeItem('auth_token');
-                        window.location.href = '/login';
-                    }
-                    return Promise.reject(error);
-                }
-            );
+            // Shared interceptor logic is centralized in /static/js/api.js
+            return;
         }
 
         function updateCounts() {
             document.getElementById('rssCount').textContent = rssConfigs.length;
+        }
+
+        let appState = null;
+
+        function setLifecycleBanner(message, level = 'info') {
+            const banner = document.getElementById('lifecycleBanner');
+            if (!banner) return;
+            if (!message) {
+                banner.style.display = 'none';
+                banner.textContent = '';
+                banner.className = 'lifecycle-banner';
+                return;
+            }
+            banner.className = `lifecycle-banner ${level}`;
+            banner.innerHTML = `<i class="bi bi-info-circle"></i><span>${message}</span>`;
+            banner.style.display = 'flex';
+        }
+
+        function applyAppState(state) {
+            appState = state || {};
+            const auth = appState.auth || {};
+            const routing = appState.routing || {};
+            const phase = appState.phase || 'degraded';
+
+            if (!auth.authenticated) {
+                window.location.href = '/login';
+                return false;
+            }
+
+            if (routing.allow_dashboard === false && routing.default_route) {
+                window.location.href = routing.default_route;
+                return false;
+            }
+
+            if (phase === 'restart_required') {
+                setLifecycleBanner('配置已更新，需要安全重启后完全生效。例行升级应保持 Telegram session，不会要求重复登录。', 'warning');
+            } else if (phase === 'degraded') {
+                setLifecycleBanner('系统当前处于降级状态，部分服务可能正在恢复。', 'info');
+            } else {
+                setLifecycleBanner('');
+            }
+            return true;
+        }
+
+        async function fetchAppState() {
+            const response = await axios.get('/api/app/state');
+            return response.data || {};
         }
 
         function updateBotStatus(data) {
@@ -1339,7 +1478,7 @@
 
         async function refreshRuleCard(ruleId) {
             try {
-                const response = await axios.get(`/rss/rules/${ruleId}`);
+                const response = await axios.get(`/rules/${ruleId}`);
                 if (response.data && response.data.rule) {
                     ruleCache[ruleId] = response.data.rule;
                     updateRuleCard(ruleId, response.data.rule);
@@ -1357,7 +1496,7 @@
             }
             const current = ruleCache[id] && ruleCache[id].basic ? !!ruleCache[id].basic.enable_rule : false;
             try {
-                const response = await axios.put(`/rss/rules/${id}`, { basic: { enable_rule: !current } });
+                const response = await axios.put(`/rules/${id}`, { basic: { enable_rule: !current } });
                 if (response.data && response.data.success) {
                     if (!ruleCache[id]) {
                         ruleCache[id] = { basic: {} };
@@ -1378,14 +1517,14 @@
             if (!id) return;
             Swal.fire({
                 title: '确认删除？',
-                text: '将删除该规则的 RSS 配置。',
+                text: '将删除该转发规则及其关联配置。',
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonText: '删除',
                 cancelButtonText: '取消'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    window.location.href = `/rss/delete/${id}`;
+                    window.location.href = `/rules/${id}/delete`;
                 }
             });
         }
@@ -1403,7 +1542,7 @@
             document.getElementById('keyword_whitelist_regex').value = '';
 
             document.getElementById('enable_media_type_filter').checked = false;
-            document.getElementById('media_type_filter_mode').value = 'whitelist';
+            document.getElementById('media_type_filter_mode').value = 'blacklist';
             document.getElementById('media_type_photo').checked = false;
             document.getElementById('media_type_document').checked = false;
             document.getElementById('media_type_video').checked = false;
@@ -1422,7 +1561,7 @@
             document.getElementById('media_duration_filter_mode').value = 'less';
 
             document.getElementById('enable_extension_filter').checked = false;
-            document.getElementById('extension_filter_mode').value = 'whitelist';
+            document.getElementById('extension_filter_mode').value = 'blacklist';
             document.getElementById('media_extensions').value = '';
         }
 
@@ -1448,7 +1587,7 @@
             document.getElementById('keyword_whitelist_regex').value = (filters.keyword_whitelist_regex || []).join('\n');
 
             document.getElementById('enable_media_type_filter').checked = !!filters.enable_media_type_filter;
-            document.getElementById('media_type_filter_mode').value = filters.media_type_filter_mode || 'whitelist';
+            document.getElementById('media_type_filter_mode').value = filters.media_type_filter_mode || 'blacklist';
             const mediaTypes = filters.media_types || {};
             document.getElementById('media_type_photo').checked = !!mediaTypes.photo;
             document.getElementById('media_type_document').checked = !!mediaTypes.document;
@@ -1468,7 +1607,7 @@
             document.getElementById('media_duration_filter_mode').value = filters.media_duration_filter_mode || 'less';
 
             document.getElementById('enable_extension_filter').checked = !!filters.enable_extension_filter;
-            document.getElementById('extension_filter_mode').value = filters.extension_filter_mode || 'whitelist';
+            document.getElementById('extension_filter_mode').value = filters.extension_filter_mode || 'blacklist';
             document.getElementById('media_extensions').value = (filters.media_extensions || []).join('\n');
         }
 
@@ -1607,7 +1746,99 @@
             return results;
         }
 
-        function buildRulePayload() {
+        function toBool(value, fallback = false) {
+            return value === undefined || value === null ? !!fallback : !!value;
+        }
+
+        function deepClone(obj) {
+            return JSON.parse(JSON.stringify(obj || {}));
+        }
+
+        function buildRuleDraftFromApi(rule) {
+            const basic = rule?.basic || {};
+            const keywords = rule?.keywords || {};
+            const mediaFilters = rule?.media_filters || {};
+            const ai = rule?.ai || {};
+            const style = rule?.style || {};
+            const advanced = rule?.advanced || {};
+            return {
+                basic: {
+                    enable_rule: toBool(basic.enable_rule, true),
+                    use_bot: toBool(basic.use_bot, true),
+                    handle_mode: basic.handle_mode || 'FORWARD',
+                    message_mode: basic.message_mode || 'Markdown',
+                    is_preview: basic.is_preview || 'follow',
+                    only_rss: toBool(basic.only_rss, false),
+                    enable_push: toBool(basic.enable_push, false),
+                    enable_only_push: toBool(basic.enable_only_push, false),
+                    enable_sync: toBool(basic.enable_sync, false),
+                    source_chat_id: String(basic.source_chat_id || ''),
+                    target_chat_id: String(basic.target_chat_id || ''),
+                    source_chat_name: basic.source_chat_name || '',
+                    target_chat_name: basic.target_chat_name || ''
+                },
+                keywords: {
+                    forward_mode: keywords.forward_mode || 'blacklist',
+                    add_mode: keywords.add_mode || 'blacklist',
+                    enable_reverse_blacklist: toBool(keywords.enable_reverse_blacklist, false),
+                    enable_reverse_whitelist: toBool(keywords.enable_reverse_whitelist, false),
+                    is_filter_user_info: toBool(keywords.is_filter_user_info, false),
+                    is_replace: toBool(keywords.is_replace, false),
+                    blacklist: keywords.blacklist || [],
+                    blacklist_regex: keywords.blacklist_regex || [],
+                    whitelist: keywords.whitelist || [],
+                    whitelist_regex: keywords.whitelist_regex || []
+                },
+                media_filters: {
+                    enable_media_type_filter: toBool(mediaFilters.enable_media_type_filter, false),
+                    media_type_filter_mode: mediaFilters.media_type_filter_mode || 'blacklist',
+                    media_types: mediaFilters.media_types || {},
+                    enable_media_size_filter: toBool(mediaFilters.enable_media_size_filter, false),
+                    max_media_size: parseInt(mediaFilters.max_media_size, 10) || 0,
+                    media_size_filter_mode: mediaFilters.media_size_filter_mode || 'less',
+                    is_send_over_media_size_message: toBool(mediaFilters.is_send_over_media_size_message, true),
+                    enable_media_duration_filter: toBool(mediaFilters.enable_media_duration_filter, false),
+                    media_duration_minutes: parseInt(mediaFilters.media_duration_minutes, 10) || 0,
+                    media_duration_filter_mode: mediaFilters.media_duration_filter_mode || 'less',
+                    enable_extension_filter: toBool(mediaFilters.enable_extension_filter, false),
+                    extension_filter_mode: mediaFilters.extension_filter_mode || 'blacklist',
+                    media_extensions: mediaFilters.media_extensions || [],
+                    media_allow_text: toBool(mediaFilters.media_allow_text, false)
+                },
+                replace_rules: rule?.replace_rules || [],
+                push_configs: rule?.push_configs || [],
+                ai: {
+                    is_ai: toBool(ai.is_ai, false),
+                    ai_model: ai.ai_model || '',
+                    ai_prompt: ai.ai_prompt || '',
+                    enable_ai_upload_image: toBool(ai.enable_ai_upload_image, false),
+                    is_keyword_after_ai: toBool(ai.is_keyword_after_ai, false),
+                    is_summary: toBool(ai.is_summary, false),
+                    summary_time: ai.summary_time || '',
+                    summary_prompt: ai.summary_prompt || '',
+                    is_top_summary: toBool(ai.is_top_summary, true)
+                },
+                style: {
+                    is_original_sender: toBool(style.is_original_sender, false),
+                    is_original_time: toBool(style.is_original_time, false),
+                    is_original_link: toBool(style.is_original_link, false),
+                    userinfo_template: style.userinfo_template || '',
+                    time_template: style.time_template || '',
+                    original_link_template: style.original_link_template || '',
+                    enable_comment_button: toBool(style.enable_comment_button, false),
+                    is_delete_original: toBool(style.is_delete_original, false)
+                },
+                advanced: {
+                    is_ufb: toBool(advanced.is_ufb, false),
+                    ufb_domain: advanced.ufb_domain || '',
+                    ufb_item: advanced.ufb_item || 'main',
+                    enable_delay: toBool(advanced.enable_delay, false),
+                    delay_seconds: parseInt(advanced.delay_seconds, 10) || 0
+                }
+            };
+        }
+
+        function buildRuleDraftFromForm() {
             const filterPayload = collectFilterPayload();
             return {
                 basic: {
@@ -1684,6 +1915,124 @@
             };
         }
 
+        function applyRuleDraftToForm(draft) {
+            if (!draft) {
+                resetRuleEditorForm();
+                return;
+            }
+            const basic = draft.basic || {};
+            const keywords = draft.keywords || {};
+            const mediaFilters = draft.media_filters || {};
+            const ai = draft.ai || {};
+            const style = draft.style || {};
+            const advanced = draft.advanced || {};
+
+            const sourceLabel = basic.source_chat_name || basic.source_chat_id || '';
+            const targetLabel = basic.target_chat_name || basic.target_chat_id || '';
+            document.getElementById('rule_editor_title').value = sourceLabel && targetLabel ? `${sourceLabel} → ${targetLabel}` : '';
+
+            document.getElementById('rule_source_chat_id').value = basic.source_chat_id || '';
+            document.getElementById('rule_target_chat_id').value = basic.target_chat_id || '';
+            document.getElementById('rule_enable_rule').checked = !!basic.enable_rule;
+            document.getElementById('rule_only_rss').checked = !!basic.only_rss;
+            document.getElementById('rule_enable_sync').checked = !!basic.enable_sync;
+            document.getElementById('rule_use_bot').value = basic.use_bot ? 'true' : 'false';
+            document.getElementById('rule_handle_mode').value = basic.handle_mode || 'FORWARD';
+            document.getElementById('rule_message_mode').value = basic.message_mode || 'Markdown';
+            document.getElementById('rule_preview_mode').value = basic.is_preview || 'follow';
+            document.getElementById('rule_enable_push').checked = !!basic.enable_push;
+            document.getElementById('rule_enable_only_push').checked = !!basic.enable_only_push;
+
+            applyFilterSettings({
+                forward_mode: keywords.forward_mode,
+                add_mode: keywords.add_mode,
+                enable_reverse_blacklist: keywords.enable_reverse_blacklist,
+                enable_reverse_whitelist: keywords.enable_reverse_whitelist,
+                is_filter_user_info: keywords.is_filter_user_info,
+                is_replace: keywords.is_replace,
+                keyword_blacklist: keywords.blacklist || [],
+                keyword_blacklist_regex: keywords.blacklist_regex || [],
+                keyword_whitelist: keywords.whitelist || [],
+                keyword_whitelist_regex: keywords.whitelist_regex || [],
+                enable_media_type_filter: mediaFilters.enable_media_type_filter,
+                media_type_filter_mode: mediaFilters.media_type_filter_mode,
+                media_types: mediaFilters.media_types || {},
+                enable_media_size_filter: mediaFilters.enable_media_size_filter,
+                max_media_size: mediaFilters.max_media_size,
+                media_size_filter_mode: mediaFilters.media_size_filter_mode,
+                is_send_over_media_size_message: mediaFilters.is_send_over_media_size_message,
+                enable_media_duration_filter: mediaFilters.enable_media_duration_filter,
+                media_duration_minutes: mediaFilters.media_duration_minutes,
+                media_duration_filter_mode: mediaFilters.media_duration_filter_mode,
+                enable_extension_filter: mediaFilters.enable_extension_filter,
+                extension_filter_mode: mediaFilters.extension_filter_mode,
+                media_extensions: mediaFilters.media_extensions || [],
+                media_allow_text: mediaFilters.media_allow_text
+            });
+
+            setReplaceRules(draft.replace_rules || []);
+            setPushConfigs(draft.push_configs || []);
+
+            document.getElementById('rule_is_ai').checked = !!ai.is_ai;
+            document.getElementById('rule_ai_model').value = ai.ai_model || '';
+            document.getElementById('rule_ai_prompt').value = ai.ai_prompt || '';
+            document.getElementById('rule_ai_upload_image').checked = !!ai.enable_ai_upload_image;
+            document.getElementById('rule_ai_keyword_after').checked = !!ai.is_keyword_after_ai;
+            document.getElementById('rule_ai_summary').checked = !!ai.is_summary;
+            document.getElementById('rule_summary_time').value = ai.summary_time || '';
+            document.getElementById('rule_summary_prompt').value = ai.summary_prompt || '';
+            document.getElementById('rule_top_summary').checked = ai.is_top_summary !== undefined ? !!ai.is_top_summary : true;
+
+            document.getElementById('rule_show_sender').checked = !!style.is_original_sender;
+            document.getElementById('rule_show_time').checked = !!style.is_original_time;
+            document.getElementById('rule_show_link').checked = !!style.is_original_link;
+            document.getElementById('rule_comment_button').checked = !!style.enable_comment_button;
+            document.getElementById('rule_delete_original').checked = !!style.is_delete_original;
+            document.getElementById('rule_userinfo_template').value = style.userinfo_template || '';
+            document.getElementById('rule_time_template').value = style.time_template || '';
+            document.getElementById('rule_link_template').value = style.original_link_template || '';
+
+            document.getElementById('rule_is_ufb').checked = !!advanced.is_ufb;
+            document.getElementById('rule_ufb_domain').value = advanced.ufb_domain || '';
+            document.getElementById('rule_ufb_item').value = advanced.ufb_item || 'main';
+            document.getElementById('rule_enable_delay').checked = !!advanced.enable_delay;
+            document.getElementById('rule_delay_seconds').value = advanced.delay_seconds !== undefined ? advanced.delay_seconds : '';
+        }
+
+        function buildRulePayloadFromDraft(draft) {
+            return deepClone(draft);
+        }
+
+        function buildComparableFilterSnapshotFromDraft(draft) {
+            const source = {
+                forward_mode: draft?.keywords?.forward_mode,
+                add_mode: draft?.keywords?.add_mode,
+                enable_reverse_blacklist: draft?.keywords?.enable_reverse_blacklist,
+                enable_reverse_whitelist: draft?.keywords?.enable_reverse_whitelist,
+                is_filter_user_info: draft?.keywords?.is_filter_user_info,
+                is_replace: draft?.keywords?.is_replace,
+                keyword_blacklist: draft?.keywords?.blacklist || [],
+                keyword_blacklist_regex: draft?.keywords?.blacklist_regex || [],
+                keyword_whitelist: draft?.keywords?.whitelist || [],
+                keyword_whitelist_regex: draft?.keywords?.whitelist_regex || [],
+                enable_media_type_filter: draft?.media_filters?.enable_media_type_filter,
+                media_type_filter_mode: draft?.media_filters?.media_type_filter_mode,
+                media_types: draft?.media_filters?.media_types || {},
+                enable_media_size_filter: draft?.media_filters?.enable_media_size_filter,
+                max_media_size: draft?.media_filters?.max_media_size,
+                media_size_filter_mode: draft?.media_filters?.media_size_filter_mode,
+                is_send_over_media_size_message: draft?.media_filters?.is_send_over_media_size_message,
+                enable_media_duration_filter: draft?.media_filters?.enable_media_duration_filter,
+                media_duration_minutes: draft?.media_filters?.media_duration_minutes,
+                media_duration_filter_mode: draft?.media_filters?.media_duration_filter_mode,
+                enable_extension_filter: draft?.media_filters?.enable_extension_filter,
+                extension_filter_mode: draft?.media_filters?.extension_filter_mode,
+                media_extensions: draft?.media_filters?.media_extensions || [],
+                media_allow_text: draft?.media_filters?.media_allow_text,
+            };
+            return normalizeFilterForCompare(source);
+        }
+
         function normalizeList(items) {
             return (items || []).map((item) => String(item || '').trim()).filter(Boolean).sort();
         }
@@ -1692,40 +2041,12 @@
             return normalizeList(items).map((item) => item.replace(/^\./, '').toLowerCase());
         }
 
-        function extractFilterPayload(data) {
-            const rule = data.rule || {};
-            const keywords = rule.keywords || {};
-            const mediaFilters = rule.media_filters || {};
-            return {
-                forward_mode: keywords.forward_mode,
-                add_mode: keywords.add_mode,
-                enable_reverse_blacklist: !!keywords.enable_reverse_blacklist,
-                enable_reverse_whitelist: !!keywords.enable_reverse_whitelist,
-                is_filter_user_info: !!keywords.is_filter_user_info,
-                is_replace: !!keywords.is_replace,
-                keyword_blacklist: keywords.blacklist || [],
-                keyword_blacklist_regex: keywords.blacklist_regex || [],
-                keyword_whitelist: keywords.whitelist || [],
-                keyword_whitelist_regex: keywords.whitelist_regex || [],
-                enable_media_type_filter: !!mediaFilters.enable_media_type_filter,
-                media_type_filter_mode: mediaFilters.media_type_filter_mode,
-                media_types: mediaFilters.media_types || {},
-                enable_media_size_filter: !!mediaFilters.enable_media_size_filter,
-                max_media_size: mediaFilters.max_media_size || 0,
-                media_size_filter_mode: mediaFilters.media_size_filter_mode,
-                is_send_over_media_size_message: !!mediaFilters.is_send_over_media_size_message,
-                enable_media_duration_filter: !!mediaFilters.enable_media_duration_filter,
-                media_duration_minutes: mediaFilters.media_duration_minutes || 0,
-                media_duration_filter_mode: mediaFilters.media_duration_filter_mode,
-                enable_extension_filter: !!mediaFilters.enable_extension_filter,
-                extension_filter_mode: mediaFilters.extension_filter_mode,
-                media_extensions: mediaFilters.media_extensions || [],
-                media_allow_text: !!mediaFilters.media_allow_text
-            };
-        }
-
         function normalizeFilterForCompare(filters) {
             const mediaTypes = filters.media_types || {};
+            const mediaTypeEnabled = !!filters.enable_media_type_filter;
+            const mediaSizeEnabled = !!filters.enable_media_size_filter;
+            const mediaDurationEnabled = !!filters.enable_media_duration_filter;
+            const extensionEnabled = !!filters.enable_extension_filter;
             return {
                 forward_mode: filters.forward_mode || 'blacklist',
                 add_mode: filters.add_mode || 'blacklist',
@@ -1737,46 +2058,60 @@
                 keyword_blacklist_regex: normalizeList(filters.keyword_blacklist_regex),
                 keyword_whitelist: normalizeList(filters.keyword_whitelist),
                 keyword_whitelist_regex: normalizeList(filters.keyword_whitelist_regex),
-                enable_media_type_filter: !!filters.enable_media_type_filter,
-                media_type_filter_mode: filters.media_type_filter_mode || 'whitelist',
-                media_types: {
+                enable_media_type_filter: mediaTypeEnabled,
+                media_type_filter_mode: mediaTypeEnabled ? (filters.media_type_filter_mode || 'blacklist') : null,
+                media_types: mediaTypeEnabled ? {
                     photo: !!mediaTypes.photo,
                     document: !!mediaTypes.document,
                     video: !!mediaTypes.video,
                     audio: !!mediaTypes.audio,
                     voice: !!mediaTypes.voice,
                     text: !!mediaTypes.text
-                },
-                enable_media_size_filter: !!filters.enable_media_size_filter,
-                max_media_size: parseInt(filters.max_media_size, 10) || 0,
-                media_size_filter_mode: filters.media_size_filter_mode || 'less',
-                is_send_over_media_size_message: !!filters.is_send_over_media_size_message,
-                enable_media_duration_filter: !!filters.enable_media_duration_filter,
-                media_duration_minutes: parseInt(filters.media_duration_minutes, 10) || 0,
-                media_duration_filter_mode: filters.media_duration_filter_mode || 'less',
-                enable_extension_filter: !!filters.enable_extension_filter,
-                extension_filter_mode: filters.extension_filter_mode || 'whitelist',
-                media_extensions: normalizeExtensions(filters.media_extensions),
-                media_allow_text: !!filters.media_allow_text
+                } : {},
+                enable_media_size_filter: mediaSizeEnabled,
+                max_media_size: mediaSizeEnabled ? (parseInt(filters.max_media_size, 10) || 0) : 0,
+                media_size_filter_mode: mediaSizeEnabled ? (filters.media_size_filter_mode || 'less') : null,
+                is_send_over_media_size_message: mediaSizeEnabled ? !!filters.is_send_over_media_size_message : false,
+                enable_media_duration_filter: mediaDurationEnabled,
+                media_duration_minutes: mediaDurationEnabled ? (parseInt(filters.media_duration_minutes, 10) || 0) : 0,
+                media_duration_filter_mode: mediaDurationEnabled ? (filters.media_duration_filter_mode || 'less') : null,
+                enable_extension_filter: extensionEnabled,
+                extension_filter_mode: extensionEnabled ? (filters.extension_filter_mode || 'blacklist') : null,
+                media_extensions: extensionEnabled ? normalizeExtensions(filters.media_extensions) : [],
+                media_allow_text: mediaTypeEnabled ? !!filters.media_allow_text : false
             };
         }
 
-        function compareFilters(expected, actual) {
-            return JSON.stringify(expected) === JSON.stringify(actual);
+        function diffFilterFields(expected, actual) {
+            const keys = Array.from(new Set([
+                ...Object.keys(expected || {}),
+                ...Object.keys(actual || {})
+            ])).sort();
+            const diffs = [];
+            keys.forEach((key) => {
+                const expectedValue = expected ? expected[key] : undefined;
+                const actualValue = actual ? actual[key] : undefined;
+                if (JSON.stringify(expectedValue) !== JSON.stringify(actualValue)) {
+                    diffs.push(key);
+                }
+            });
+            return diffs;
         }
 
-        async function verifyFilterSettings(ruleId, expectedPayload) {
+        async function verifyFilterSettings(ruleId, expectedSnapshot) {
             try {
-                const response = await axios.get(`/rss/rules/${ruleId}`);
+                const response = await axios.get(`/rules/${ruleId}`);
                 const data = response.data || {};
                 if (!data.success) {
-                    return false;
+                    return { ok: false, diffFields: ['network_or_unknown'] };
                 }
-                const expected = normalizeFilterForCompare(expectedPayload);
-                const actual = normalizeFilterForCompare(extractFilterPayload(data));
-                return compareFilters(expected, actual);
+                const apiDraft = buildRuleDraftFromApi(data.rule || {});
+                const actual = buildComparableFilterSnapshotFromDraft(apiDraft);
+                const expected = expectedSnapshot;
+                const diffFields = diffFilterFields(expected, actual);
+                return { ok: diffFields.length === 0, diffFields };
             } catch (error) {
-                return false;
+                return { ok: false, diffFields: ['network_or_unknown'] };
             }
         }
 
@@ -1828,89 +2163,13 @@
                 resetRuleEditorForm();
                 return;
             }
-            const basic = rule.basic || {};
-            const keywords = rule.keywords || {};
-            const mediaFilters = rule.media_filters || {};
-            const ai = rule.ai || {};
-            const style = rule.style || {};
-            const advanced = rule.advanced || {};
-
             document.getElementById('rule_editor_id').value = rule.rule_id || currentRuleId || '';
-            const sourceLabel = basic.source_chat_name || basic.source_chat_id || '';
-            const targetLabel = basic.target_chat_name || basic.target_chat_id || '';
-            document.getElementById('rule_editor_title').value = sourceLabel && targetLabel ? `${sourceLabel} → ${targetLabel}` : '';
-
-            document.getElementById('rule_source_chat_id').value = basic.source_chat_id || '';
-            document.getElementById('rule_target_chat_id').value = basic.target_chat_id || '';
-            document.getElementById('rule_enable_rule').checked = !!basic.enable_rule;
-            document.getElementById('rule_only_rss').checked = !!basic.only_rss;
-            document.getElementById('rule_enable_sync').checked = !!basic.enable_sync;
-            document.getElementById('rule_use_bot').value = basic.use_bot ? 'true' : 'false';
-            document.getElementById('rule_handle_mode').value = basic.handle_mode || 'FORWARD';
-            document.getElementById('rule_message_mode').value = basic.message_mode || 'Markdown';
-            document.getElementById('rule_preview_mode').value = basic.is_preview || 'follow';
-            document.getElementById('rule_enable_push').checked = !!basic.enable_push;
-            document.getElementById('rule_enable_only_push').checked = !!basic.enable_only_push;
-
-            applyFilterSettings({
-                forward_mode: keywords.forward_mode,
-                add_mode: keywords.add_mode,
-                enable_reverse_blacklist: keywords.enable_reverse_blacklist,
-                enable_reverse_whitelist: keywords.enable_reverse_whitelist,
-                is_filter_user_info: keywords.is_filter_user_info,
-                is_replace: keywords.is_replace,
-                keyword_blacklist: keywords.blacklist || [],
-                keyword_blacklist_regex: keywords.blacklist_regex || [],
-                keyword_whitelist: keywords.whitelist || [],
-                keyword_whitelist_regex: keywords.whitelist_regex || [],
-                enable_media_type_filter: mediaFilters.enable_media_type_filter,
-                media_type_filter_mode: mediaFilters.media_type_filter_mode,
-                media_types: mediaFilters.media_types || {},
-                enable_media_size_filter: mediaFilters.enable_media_size_filter,
-                max_media_size: mediaFilters.max_media_size,
-                media_size_filter_mode: mediaFilters.media_size_filter_mode,
-                is_send_over_media_size_message: mediaFilters.is_send_over_media_size_message,
-                enable_media_duration_filter: mediaFilters.enable_media_duration_filter,
-                media_duration_minutes: mediaFilters.media_duration_minutes,
-                media_duration_filter_mode: mediaFilters.media_duration_filter_mode,
-                enable_extension_filter: mediaFilters.enable_extension_filter,
-                extension_filter_mode: mediaFilters.extension_filter_mode,
-                media_extensions: mediaFilters.media_extensions || [],
-                media_allow_text: mediaFilters.media_allow_text
-            });
-
-            setReplaceRules(rule.replace_rules || []);
-            setPushConfigs(rule.push_configs || []);
-
-            document.getElementById('rule_is_ai').checked = !!ai.is_ai;
-            document.getElementById('rule_ai_model').value = ai.ai_model || '';
-            document.getElementById('rule_ai_prompt').value = ai.ai_prompt || '';
-            document.getElementById('rule_ai_upload_image').checked = !!ai.enable_ai_upload_image;
-            document.getElementById('rule_ai_keyword_after').checked = !!ai.is_keyword_after_ai;
-            document.getElementById('rule_ai_summary').checked = !!ai.is_summary;
-            document.getElementById('rule_summary_time').value = ai.summary_time || '';
-            document.getElementById('rule_summary_prompt').value = ai.summary_prompt || '';
-            document.getElementById('rule_top_summary').checked = ai.is_top_summary !== undefined ? !!ai.is_top_summary : true;
-
-            document.getElementById('rule_show_sender').checked = !!style.is_original_sender;
-            document.getElementById('rule_show_time').checked = !!style.is_original_time;
-            document.getElementById('rule_show_link').checked = !!style.is_original_link;
-            document.getElementById('rule_comment_button').checked = !!style.enable_comment_button;
-            document.getElementById('rule_delete_original').checked = !!style.is_delete_original;
-            document.getElementById('rule_userinfo_template').value = style.userinfo_template || '';
-            document.getElementById('rule_time_template').value = style.time_template || '';
-            document.getElementById('rule_link_template').value = style.original_link_template || '';
-
-            document.getElementById('rule_is_ufb').checked = !!advanced.is_ufb;
-            document.getElementById('rule_ufb_domain').value = advanced.ufb_domain || '';
-            document.getElementById('rule_ufb_item').value = advanced.ufb_item || 'main';
-            document.getElementById('rule_enable_delay').checked = !!advanced.enable_delay;
-            document.getElementById('rule_delay_seconds').value = advanced.delay_seconds !== undefined ? advanced.delay_seconds : '';
+            applyRuleDraftToForm(buildRuleDraftFromApi(rule));
         }
 
         async function loadRuleDetail(ruleId) {
             try {
-                const response = await axios.get(`/rss/rules/${ruleId}`);
+                const response = await axios.get(`/rules/${ruleId}`);
                 if (response.data && response.data.rule) {
                     ruleCache[ruleId] = response.data.rule;
                     applyRuleDetail(response.data.rule);
@@ -1937,13 +2196,17 @@
             const modal = new bootstrap.Modal(document.getElementById('ruleEditorModal'));
             modal.show();
             loadRuleDetail(id);
+            startBackfillStatusPolling();
+            syncRuleEditorActionState();
         }
 
         async function saveRuleDetail() {
-            const payload = buildRulePayload();
+            const draftToSave = buildRuleDraftFromForm();
+            const payload = buildRulePayloadFromDraft(draftToSave);
+            const expectedSnapshot = buildComparableFilterSnapshotFromDraft(draftToSave);
             if (isCreating) {
                 try {
-                    const response = await axios.post('/rss/rules', payload);
+                    const response = await axios.post('/rules', payload);
                     if (response.data && response.data.success) {
                         showToast('规则已创建');
                         isCreating = false;
@@ -1967,13 +2230,34 @@
                 return;
             }
             try {
-                const response = await axios.put(`/rss/rules/${currentRuleId}`, payload);
+                const response = await axios.put(`/rules/${currentRuleId}`, payload);
                 if (response.data && response.data.success) {
-                    const verified = await verifyFilterSettings(currentRuleId, payload);
-                    if (verified) {
-                        showToast('保存成功且已校验');
+                    const verifyResult = await verifyFilterSettings(currentRuleId, expectedSnapshot);
+                    if (verifyResult.ok) {
+                        showToast('保存成功');
                     } else {
-                        showToast('配置可能未完整写入，请刷新重试', 'warning');
+                        const labels = {
+                            media_type_filter_mode: '媒体类型模式',
+                            media_types: '媒体类型勾选',
+                            enable_media_type_filter: '启用媒体类型过滤',
+                            extension_filter_mode: '扩展名模式',
+                            media_extensions: '扩展名列表',
+                            enable_extension_filter: '启用扩展名过滤',
+                            enable_media_size_filter: '启用大小过滤',
+                            max_media_size: '媒体大小阈值',
+                            media_size_filter_mode: '大小过滤条件',
+                            enable_media_duration_filter: '启用时长过滤',
+                            media_duration_minutes: '媒体时长阈值',
+                            media_duration_filter_mode: '时长过滤条件',
+                            media_allow_text: '文本放行设置',
+                            network_or_unknown: '网络或未知异常'
+                        };
+                        const fieldText = (verifyResult.diffFields || [])
+                            .slice(0, 3)
+                            .map((k) => labels[k] || k)
+                            .join('、');
+                        const suffix = fieldText ? `（差异字段：${fieldText}）` : '';
+                        showToast(`保存成功，回读校验存在差异${suffix}`, 'warning');
                     }
                     refreshRuleCard(currentRuleId);
                 } else {
@@ -2004,13 +2288,157 @@
             }
         }
 
+        function syncRuleEditorActionState() {
+            const saveBtn = document.getElementById('saveRuleBtn');
+            if (!saveBtn) return;
+            const activeTab = document.querySelector('#ruleEditorModal .nav-link.active');
+            const target = activeTab ? activeTab.getAttribute('data-bs-target') : '';
+            if (target === '#tabRuntime') {
+                saveBtn.disabled = true;
+                saveBtn.textContent = '运行页无需保存';
+            } else {
+                saveBtn.disabled = false;
+                saveBtn.textContent = '保存规则';
+            }
+        }
+
+        function renderBackfillStatus(data) {
+            const statusText = document.getElementById('backfillStatusText');
+            const progressText = document.getElementById('backfillProgressText');
+            const metaText = document.getElementById('backfillMetaText');
+            const reasonList = document.getElementById('backfillReasonList');
+            const sampleList = document.getElementById('backfillSampleList');
+            const hintText = document.getElementById('backfillOptimizationHint');
+            if (!statusText || !progressText || !metaText || !reasonList || !sampleList || !hintText) return;
+
+            const resetReasonViews = () => {
+                reasonList.innerHTML = '<li class="text-muted">暂无原因统计</li>';
+                sampleList.innerHTML = '<li class="text-muted">暂无样本</li>';
+                hintText.textContent = '优化建议：暂无';
+            };
+
+            const reasonLabelMap = {
+                duplicate: '重复消息',
+                keyword: '关键词过滤',
+                media_type: '媒体类型过滤',
+                media_duration: '媒体时长过滤',
+                media_size: '媒体大小过滤',
+                extension: '扩展名过滤',
+                filter_chain_blocked: '过滤链中断',
+                forward_failed: '转发失败',
+                unknown: '未知异常',
+            };
+
+            const renderReasonInsights = (task) => {
+                const skipReasons = task.skip_reasons || {};
+                const entries = Object.entries(skipReasons)
+                    .filter(([, count]) => Number(count) > 0)
+                    .sort((a, b) => Number(b[1]) - Number(a[1]));
+
+                if (!entries.length) {
+                    resetReasonViews();
+                    return;
+                }
+
+                reasonList.innerHTML = entries
+                    .slice(0, 5)
+                    .map(([key, count]) => `<li>${reasonLabelMap[key] || key}: ${count}</li>`)
+                    .join('');
+
+                const samples = Array.isArray(task.recent_reason_samples) ? task.recent_reason_samples : [];
+                if (!samples.length) {
+                    sampleList.innerHTML = '<li class="text-muted">暂无样本</li>';
+                } else {
+                    sampleList.innerHTML = samples
+                        .slice(-5)
+                        .reverse()
+                        .map((item) => {
+                            const label = reasonLabelMap[item.reason] || item.reason || '未知';
+                            const msg = item.message_id ? `#${item.message_id}` : '#-';
+                            const detail = item.detail || '';
+                            return `<li>${label} ${msg}${detail ? ` · ${detail}` : ''}</li>`;
+                        })
+                        .join('');
+                }
+
+                const topReason = entries[0][0];
+                if (topReason === 'forward_failed' || topReason === 'unknown') {
+                    hintText.textContent = '优化建议：失败/异常占比较高，建议优先排查发送链路或限流。';
+                } else if (topReason === 'duplicate') {
+                    hintText.textContent = '优化建议：主要被去重跳过，通常不属于性能问题。';
+                } else {
+                    hintText.textContent = '优化建议：主要由规则筛选导致，无需优先做性能优化。';
+                }
+            };
+
+            if (!data || !data.task) {
+                statusText.textContent = '未启动';
+                progressText.textContent = '已扫描 0 / 已处理 0 / 已跳过 0 / 未转发 0';
+                metaText.textContent = `去重记录：${data && data.dedup_count !== undefined ? data.dedup_count : 0}`;
+                resetReasonViews();
+                return;
+            }
+
+            const task = data.task;
+            const state = task.status || (data.active ? 'running' : 'idle');
+            const opMap = {
+                backfill: '回填',
+                video_forward: '转发视频'
+            };
+            const opLabel = opMap[task.operation] || '任务';
+            const stateMap = {
+                queued: '排队中',
+                running: '运行中',
+                cancel_requested: '停止中',
+                canceled: '已停止',
+                succeeded: '已完成',
+                failed: '失败',
+                idle: '空闲'
+            };
+            statusText.textContent = `${opLabel} · ${stateMap[state] || state}${task.message ? ` · ${task.message}` : ''}`;
+            progressText.textContent = `已扫描 ${task.scanned || 0} / 已处理 ${task.processed || 0} / 已跳过 ${task.skipped_dup || 0} / 未转发 ${task.not_forwarded || 0}`;
+            metaText.textContent = `去重记录：${data.dedup_count || 0}${task.started_at ? ` · 开始: ${task.started_at}` : ''}${task.finished_at ? ` · 结束: ${task.finished_at}` : ''}`;
+            renderReasonInsights(task);
+        }
+
+        async function refreshRuleBackfillStatus() {
+            if (!currentRuleId || isCreating) {
+                renderBackfillStatus({ active: false, task: null, dedup_count: 0 });
+                return;
+            }
+            try {
+                const response = await axios.get(`/api/rules/${currentRuleId}/backfill/status`);
+                renderBackfillStatus(response.data || {});
+            } catch (error) {
+                renderBackfillStatus({ active: false, task: null, dedup_count: 0 });
+            }
+        }
+
+        function startBackfillStatusPolling() {
+            stopBackfillStatusPolling();
+            refreshRuleBackfillStatus();
+            backfillStatusTimer = setInterval(refreshRuleBackfillStatus, 5000);
+        }
+
+        function stopBackfillStatusPolling() {
+            if (!backfillStatusTimer) return;
+            clearInterval(backfillStatusTimer);
+            backfillStatusTimer = null;
+        }
+
         async function startRuleBackfill() {
             if (!currentRuleId) {
                 showToast('请先选择规则', 'warning');
                 return;
             }
             const mode = document.getElementById('backfill_mode').value;
-            const payload = { mode };
+            const payload = {
+                mode,
+                batch_size: parseInt(document.getElementById('backfill_batch_size').value, 10) || 20,
+                batch_delay_seconds: parseFloat(document.getElementById('backfill_batch_delay_seconds').value) || 0,
+                message_delay_seconds: parseFloat(document.getElementById('backfill_message_delay_seconds').value) || 0,
+                adaptive_throttle: !!document.getElementById('backfill_adaptive_throttle').checked,
+            };
             if (mode === 'last') {
                 const limitValue = parseInt(document.getElementById('backfill_limit').value, 10);
                 if (!limitValue) {
@@ -2032,12 +2460,87 @@
                 const response = await axios.post(`/api/rules/${currentRuleId}/backfill`, payload);
                 if (response.data && response.data.success) {
                     showToast(response.data.message || '回填已启动');
+                    refreshRuleBackfillStatus();
                 } else {
                     showToast(response.data.message || '回填失败', 'error');
                 }
             } catch (error) {
                 showToast('回填失败', 'error');
             }
+        }
+
+        async function startRuleVideoForward() {
+            if (!currentRuleId) {
+                showToast('请先选择规则', 'warning');
+                return;
+            }
+
+            const payload = {
+                batch_size: parseInt(document.getElementById('backfill_batch_size').value, 10) || 20,
+                batch_delay_seconds: parseFloat(document.getElementById('backfill_batch_delay_seconds').value) || 0,
+                message_delay_seconds: parseFloat(document.getElementById('backfill_message_delay_seconds').value) || 0,
+                adaptive_throttle: !!document.getElementById('backfill_adaptive_throttle').checked,
+            };
+
+            try {
+                const response = await axios.post(`/api/rules/${currentRuleId}/backfill/video-forward`, payload);
+                if (response.data && response.data.success) {
+                    showToast(response.data.message || '视频转发任务已启动');
+                    refreshRuleBackfillStatus();
+                } else {
+                    showToast(response.data.message || '视频转发启动失败', 'error');
+                }
+            } catch (error) {
+                showToast(error.response?.data?.message || '视频转发启动失败', 'error');
+            }
+        }
+
+        async function stopRuleBackfill() {
+            if (!currentRuleId) {
+                showToast('请先选择规则', 'warning');
+                return;
+            }
+            try {
+                const response = await axios.post(`/api/rules/${currentRuleId}/backfill/stop`);
+                if (response.data && response.data.success) {
+                    showToast(response.data.message || '已请求停止回填');
+                } else {
+                    showToast(response.data.message || '停止失败', 'warning');
+                }
+            } catch (error) {
+                showToast('停止失败', 'error');
+            }
+            refreshRuleBackfillStatus();
+        }
+
+        async function resetRuleBackfillDedup() {
+            if (!currentRuleId) {
+                showToast('请先选择规则', 'warning');
+                return;
+            }
+            const result = await Swal.fire({
+                title: '确认清理回填去重？',
+                text: '清理后再次回填可能重复处理历史消息。',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: '确认清理',
+                cancelButtonText: '取消',
+                background: '#101826',
+                color: '#e6edf3'
+            });
+            if (!result.isConfirmed) return;
+
+            try {
+                const response = await axios.post(`/api/rules/${currentRuleId}/backfill/reset`);
+                if (response.data && response.data.success) {
+                    showToast(response.data.message || '已清理回填去重记录');
+                } else {
+                    showToast(response.data.message || '清理失败', 'error');
+                }
+            } catch (error) {
+                showToast(error.response?.data?.message || '清理失败', 'error');
+            }
+            refreshRuleBackfillStatus();
         }
 
         function toggleModelInput(showInput) {
@@ -2074,6 +2577,7 @@
                 const session = data.session || {};
                 document.getElementById('tgApiId').value = telegram.api_id || '';
                 document.getElementById('tgApiHash').value = telegram.api_hash || '';
+                document.getElementById('tgUserId').value = telegram.user_id || '';
                 document.getElementById('tgPhone').value = telegram.phone || '';
                 document.getElementById('tgBotToken').value = telegram.bot_token_set ? '******' : '';
                 document.getElementById('aiEnabled').checked = !!aiService.enabled;
@@ -2107,22 +2611,103 @@
                 document.getElementById('aiApiKey').value = aiService.api_key_set ? '******' : '';
                 document.getElementById('aiKeyStrategy').value = aiService.key_strategy || 'sequence';
                 document.getElementById('tgSessionInfo').textContent = `Session: user=${session.user_session_exists ? '已存在' : '无'} / bot=${session.bot_session_exists ? '已存在' : '无'}`;
+                window.__telegramBaseline = {
+                    api_id: telegram.api_id || '',
+                    api_hash: telegram.api_hash || '',
+                    user_id: telegram.user_id || ''
+                };
+                await loadInviteCode();
                 toggleModelInput(false);
             } catch (error) {
                 showToast('加载全局设置失败', 'error');
             }
         }
 
+        async function loadInviteCode() {
+            try {
+                const response = await axios.get('/api/config/invite-code');
+                if (response.data && typeof response.data.invite_code === 'string') {
+                    document.getElementById('inviteCodeInput').value = response.data.invite_code;
+                }
+            } catch (error) {
+                // keep settings modal usable even if invite API fails
+            }
+        }
+
+        async function saveInviteCode() {
+            const inviteCode = document.getElementById('inviteCodeInput').value.trim();
+            if (!inviteCode) {
+                showToast('邀请码不能为空', 'error');
+                return;
+            }
+            try {
+                const response = await axios.patch('/api/config/invite-code', { invite_code: inviteCode });
+                if (response.data && response.data.success) {
+                    document.getElementById('inviteCodeInput').value = response.data.invite_code || inviteCode;
+                    showToast('邀请码已更新');
+                } else {
+                    showToast('邀请码更新失败', 'error');
+                }
+            } catch (error) {
+                const message = error && error.response && error.response.data && error.response.data.detail
+                    ? error.response.data.detail
+                    : '邀请码更新失败';
+                showToast(message, 'error');
+            }
+        }
+
+        async function rotateInviteCode() {
+            const confirmed = window.confirm('确认删除当前邀请码并自动生成新邀请码吗？');
+            if (!confirmed) {
+                return;
+            }
+
+            try {
+                const response = await axios.post('/api/config/invite-code/rotate');
+                if (response.data && response.data.success) {
+                    document.getElementById('inviteCodeInput').value = response.data.invite_code || '';
+                    showToast('已生成新邀请码');
+                } else {
+                    showToast('生成新邀请码失败', 'error');
+                }
+            } catch (error) {
+                const message = error && error.response && error.response.data && error.response.data.detail
+                    ? error.response.data.detail
+                    : '生成新邀请码失败';
+                showToast(message, 'error');
+            }
+        }
+
         async function saveGlobalSettings() {
+            const baseline = window.__telegramBaseline || { api_id: '', api_hash: '', user_id: '' };
+            const currentApiId = document.getElementById('tgApiId').value.trim();
+            const currentApiHash = document.getElementById('tgApiHash').value.trim();
+            const currentUserId = document.getElementById('tgUserId').value.trim();
+            const currentBotToken = document.getElementById('tgBotToken').value.trim();
+
+            const changedApiCredentials = (
+                currentApiId !== baseline.api_id ||
+                currentApiHash !== baseline.api_hash ||
+                currentUserId !== baseline.user_id
+            );
+            const changedBotToken = !!(currentBotToken && currentBotToken !== '******');
+
+            if (changedApiCredentials || changedBotToken) {
+                if (!changedApiCredentials && changedBotToken) {
+                    const confirmed = window.confirm('检测到仅 BOT_TOKEN 变更。将自动执行安全替换并尝试即时激活对应 bot，是否继续？');
+                    if (!confirmed) {
+                        return;
+                    }
+                    await replaceTelegramCredentials({ requireTypedConfirm: false });
+                    return;
+                }
+                showToast('检测到 API_ID/API_HASH/USER_ID 变更，请前往“安全与维护”执行替换流程', 'error');
+                return;
+            }
+
             const telegram = {
-                api_id: document.getElementById('tgApiId').value.trim(),
-                api_hash: document.getElementById('tgApiHash').value.trim(),
                 phone: document.getElementById('tgPhone').value.trim()
             };
-            const botTokenValue = document.getElementById('tgBotToken').value.trim();
-            if (botTokenValue) {
-                telegram.bot_token = botTokenValue;
-            }
 
             const aiService = {
                 enabled: document.getElementById('aiEnabled').checked,
@@ -2146,6 +2731,107 @@
                 }
             } catch (error) {
                 showToast('保存失败', 'error');
+            }
+        }
+
+        async function requestSystemRestart() {
+            const confirmText = window.prompt('请输入 RESTART 确认重启容器');
+            if (!confirmText) {
+                return;
+            }
+            try {
+                const response = await axios.post('/api/system/restart', { confirm_text: confirmText });
+                if (response.data && response.data.success) {
+                    showToast('重启指令已发送，页面将自动刷新');
+                    setTimeout(() => window.location.reload(), 5000);
+                } else {
+                    showToast('重启失败', 'error');
+                }
+            } catch (error) {
+                const message = error && error.response && error.response.data && error.response.data.detail
+                    ? error.response.data.detail
+                    : '重启失败';
+                showToast(message, 'error');
+            }
+        }
+
+        async function replaceTelegramCredentials(options = {}) {
+            const { requireTypedConfirm = true } = options;
+            const payload = {
+                api_id: document.getElementById('tgApiId').value.trim(),
+                api_hash: document.getElementById('tgApiHash').value.trim(),
+                bot_token: document.getElementById('tgBotToken').value.trim(),
+                user_id: document.getElementById('tgUserId').value.trim(),
+                phone: document.getElementById('tgPhone').value.trim(),
+                confirm_text: ''
+            };
+
+            if (!payload.api_id || !payload.api_hash || !payload.user_id) {
+                showToast('API_ID/API_HASH/USER_ID 不能为空', 'error');
+                return;
+            }
+            if (!payload.bot_token) {
+                showToast('Bot Token 不能为空；未修改请保留 ******', 'error');
+                return;
+            }
+
+            let confirmText = '';
+            if (requireTypedConfirm) {
+                confirmText = window.prompt('高风险操作：请输入 REPLACE 继续替换 Telegram 凭据');
+                if (!confirmText) {
+                    return;
+                }
+            }
+            payload.confirm_text = requireTypedConfirm ? confirmText : '';
+
+            try {
+                const response = await axios.post('/api/bootstrap/telegram-config/replace', payload);
+                if (response.data && response.data.success) {
+                    const message = response.data.message || '配置已更新';
+                    showToast(message);
+
+                    if (response.data.restart_required) {
+                        const tip = response.data.reset_scope === 'all'
+                            ? '检测到 API 凭据变更，建议立即重启并重新完成 Telegram 登录。现在重启吗？'
+                            : '仅 bot 会话已重置，建议立即重启容器使新 Token 生效（用户 Telegram 会话会保留）。现在重启吗？';
+                        const shouldRestart = window.confirm(tip);
+                        if (shouldRestart) {
+                            await requestSystemRestart();
+                        }
+                    }
+
+                    loadGlobalSettings();
+                } else {
+                    showToast('替换失败', 'error');
+                }
+            } catch (error) {
+                const message = error && error.response && error.response.data && error.response.data.detail
+                    ? error.response.data.detail
+                    : '替换失败';
+                showToast(message, 'error');
+            }
+        }
+
+        async function resetTelegramSession() {
+            const confirmed = window.confirm('将清空 Telegram 会话并要求重新短信验证，是否继续？');
+            if (!confirmed) {
+                return;
+            }
+            try {
+                const response = await axios.post('/api/bootstrap/telegram-session/reset');
+                if (response.data && response.data.success) {
+                    showToast('会话已重置，请重新完成 Telegram 登录');
+                    setTimeout(() => {
+                        window.location.href = '/setup_wizard';
+                    }, 1200);
+                } else {
+                    showToast('重置失败', 'error');
+                }
+            } catch (error) {
+                const message = error && error.response && error.response.data && error.response.data.detail
+                    ? error.response.data.detail
+                    : '重置失败';
+                showToast(message, 'error');
             }
         }
 
@@ -2182,9 +2868,20 @@
             });
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             initAxiosInterceptors();
             updateCounts();
+
+            try {
+                const state = await fetchAppState();
+                if (!applyAppState(state)) {
+                    return;
+                }
+            } catch (error) {
+                window.location.href = '/login';
+                return;
+            }
+
             fetchBotStatus();
             fetchSystemStatus();
             loadGlobalSettings();
@@ -2192,6 +2889,14 @@
 
             setInterval(fetchBotStatus, 15000);
             setInterval(fetchSystemStatus, 15000);
+            setInterval(async () => {
+                try {
+                    const state = await fetchAppState();
+                    applyAppState(state);
+                } catch (_) {
+                    // keep current view; auth interceptor handles 401
+                }
+            }, 20000);
 
             document.getElementById('ruleSearch').addEventListener('input', filterRules);
             document.getElementById('logSearch').addEventListener('input', renderLogs);
@@ -2208,6 +2913,11 @@
                 renderLogs();
             });
             document.getElementById('saveSettingsBtn').addEventListener('click', saveGlobalSettings);
+            document.getElementById('replaceTelegramCredsBtn').addEventListener('click', replaceTelegramCredentials);
+            document.getElementById('resetTelegramSessionBtn').addEventListener('click', resetTelegramSession);
+            document.getElementById('saveInviteCodeBtn').addEventListener('click', saveInviteCode);
+            document.getElementById('rotateInviteCodeBtn').addEventListener('click', rotateInviteCode);
+            document.getElementById('requestRestartBtn').addEventListener('click', requestSystemRestart);
             document.getElementById('btnFetchModels').addEventListener('click', async () => {
                 const btn = document.getElementById('btnFetchModels');
                 const statusDiv = document.getElementById('modelFetchStatus');
@@ -2297,6 +3007,11 @@
             document.getElementById('backfill_mode').addEventListener('change', updateBackfillMode);
             updateBackfillMode();
 
+            const ruleTabButtons = document.querySelectorAll('#ruleEditorModal .nav-link[data-bs-toggle="tab"]');
+            ruleTabButtons.forEach((tabButton) => {
+                tabButton.addEventListener('shown.bs.tab', syncRuleEditorActionState);
+            });
+
             const logPanel = document.getElementById('logPanel');
             logPanel.addEventListener('shown.bs.collapse', startLogPolling);
             logPanel.addEventListener('hidden.bs.collapse', stopLogPolling);
@@ -2305,6 +3020,8 @@
                 resetRuleEditorForm();
                 isCreating = true;
                 currentRuleId = null;
+                stopBackfillStatusPolling();
+                renderBackfillStatus({ active: false, task: null, dedup_count: 0 });
                 document.getElementById('rule_editor_id').value = '(自动生成)';
                 document.getElementById('rule_editor_title').value = '';
                 const modalTitle = document.querySelector('#ruleEditorModal .modal-title');
@@ -2313,7 +3030,15 @@
                 }
                 const modal = new bootstrap.Modal(document.getElementById('ruleEditorModal'));
                 modal.show();
+                syncRuleEditorActionState();
             });
+
+            const ruleEditorModal = document.getElementById('ruleEditorModal');
+            if (ruleEditorModal) {
+                ruleEditorModal.addEventListener('hidden.bs.modal', () => {
+                    stopBackfillStatusPolling();
+                });
+            }
         });
     </script>
 </body>

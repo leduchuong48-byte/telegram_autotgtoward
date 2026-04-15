@@ -9,24 +9,26 @@ services:
         PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.tuna.tsinghua.edu.cn/simple}
         PIP_TRUSTED_HOST: ${PIP_TRUSTED_HOST:-pypi.tuna.tsinghua.edu.cn}
     # 本地镜像名（可按需改成你自己的 tag）
-    image: telegram_chanel_autotoward:3.1
-    container_name: autotgtoward
+    image: telegram_chanel_autotoward:3.2
+    container_name: autotgtoward_anya
     # 如果需要使用 RSS 功能，请取消以下注释
     ports:
-      - "1008:8000"
+      - "1010:8000"
     restart: always
+    env_file:
+      - .env
     environment:
       - INVITE_CODE=${INVITE_CODE}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - TZ=${TZ}
     volumes:
       - ./db:/app/db
-      - ./.env:/app/.env
       - ./logs:/app/logs
       - ./sessions:/app/sessions
       - ./temp:/app/temp
       - ./ufb/config:/app/ufb/config
       - ./config:/app/config
+      - ./config/config.json:/app/config/config.json
       - ./rss/data:/app/rss/data
       - ./rss/media:/app/rss/media
     logging:

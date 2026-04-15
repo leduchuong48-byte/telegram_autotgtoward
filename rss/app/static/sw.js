@@ -1,13 +1,12 @@
-const STATIC_CACHE = 'static-v1';
-const PAGE_CACHE = 'pages-v1';
+const CACHE_VERSION = 'v3';
+const STATIC_CACHE = `static-${CACHE_VERSION}`;
+const PAGE_CACHE = `pages-${CACHE_VERSION}`;
 
-const PAGE_URLS = ['/', '/rss_dashboard', '/rss/dashboard'];
+const STATIC_PREFIXES = ['/static/'];
+const NO_CACHE_PATHS = ['/', '/login', '/register', '/setup_wizard', '/rss/dashboard', '/rss_dashboard', '/config_editor'];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(PAGE_CACHE).then((cache) => cache.addAll(PAGE_URLS))
-  );
-  self.skipWaiting();
+  event.waitUntil(self.skipWaiting());
 });
 
 self.addEventListener('activate', (event) => {
@@ -18,9 +17,8 @@ self.addEventListener('activate', (event) => {
           .filter((key) => ![STATIC_CACHE, PAGE_CACHE].includes(key))
           .map((key) => caches.delete(key))
       )
-    )
+    ).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
 function cacheFirst(request) {
@@ -38,12 +36,12 @@ function cacheFirst(request) {
   });
 }
 
-function networkFirst(request) {
+function networkFirst(request, cacheName, shouldCache = true) {
   return fetch(request)
     .then((response) => {
-      if (response && response.ok) {
+      if (shouldCache && response && response.ok) {
         const copy = response.clone();
-        caches.open(PAGE_CACHE).then((cache) => cache.put(request, copy));
+        caches.open(cacheName).then((cache) => cache.put(request, copy));
       }
       return response;
     })
@@ -66,12 +64,14 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  if (url.pathname.startsWith('/static/css/') || url.pathname.startsWith('/static/js/')) {
-    event.respondWith(cacheFirst(request));
+  if (request.mode === 'navigate') {
+    const shouldCachePage = !NO_CACHE_PATHS.includes(url.pathname);
+    event.respondWith(networkFirst(request, PAGE_CACHE, shouldCachePage));
     return;
   }
 
-  if (PAGE_URLS.includes(url.pathname)) {
-    event.respondWith(networkFirst(request));
+  if (STATIC_PREFIXES.some((prefix) => url.pathname.startsWith(prefix))) {
+    event.respondWith(cacheFirst(request));
+    return;
   }
 });

@@ -27,6 +27,9 @@ class KeywordFilter(BaseFilter):
 
         
         should_forward = await check_keywords(rule, message_text, event)
+        if not should_forward:
+            context.stop_reason = 'keyword'
+            context.stop_reason_detail = 'keyword filter blocked message'
         
         return should_forward
     

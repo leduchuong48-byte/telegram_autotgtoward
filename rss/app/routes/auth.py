@@ -15,7 +15,7 @@ import models.models as models
 import os
 import secrets
 from pathlib import Path
-from rss.app.core import bot_runtime
+from rss.app.core.app_state import build_app_state
 
 router = APIRouter()
 templates = Jinja2Templates(directory="rss/app/templates")
@@ -195,7 +195,14 @@ async def register(request: Request):
 
     from rss.app.core.config_manager import config_manager
     expected_invite = config_manager.get_invite_code()
-    if not invite_code or invite_code != expected_invite:
+
+    db_session = get_session()
+    try:
+        has_users = db_session.query(User).first() is not None
+    finally:
+        db_session.close()
+
+    if has_users and (not invite_code or invite_code != expected_invite):
         return templates.TemplateResponse(
             "register.html",
             {"request": request, "error": "邀请码错误或未填写"},
@@ -241,7 +248,7 @@ class RegisterRequest(BaseModel):
     username: str
     password: str
     confirm_password: str
-    invite_code: str
+    invite_code: str = ""
 
 
 @router.post("/api/register")
@@ -249,7 +256,14 @@ async def api_register(payload: RegisterRequest):
     invite_code = (payload.invite_code or "").strip()
     from rss.app.core.config_manager import config_manager
     expected_invite = config_manager.get_invite_code()
-    if not invite_code or invite_code != expected_invite:
+
+    db_session = get_session()
+    try:
+        has_users = db_session.query(User).first() is not None
+    finally:
+        db_session.close()
+
+    if has_users and (not invite_code or invite_code != expected_invite):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="邀请码错误")
 
     if payload.password != payload.confirm_password:
@@ -273,15 +287,13 @@ async def logout():
 
 @router.get("/", response_class=HTMLResponse)
 async def index(request: Request, user = Depends(get_current_user)):
-    if bot_runtime.get_login_status() != "logged_in":
-        return RedirectResponse(url="/setup_wizard", status_code=status.HTTP_302_FOUND)
-    # 直接重定向到 RSS 仪表盘
-    return RedirectResponse(url="/rss/dashboard", status_code=status.HTTP_302_FOUND)
+    state = build_app_state(bool(user))
+    return RedirectResponse(url=state["routing"]["default_route"], status_code=status.HTTP_302_FOUND)
 
 
 @router.get("/rss_dashboard")
 async def rss_dashboard_alias():
-    return RedirectResponse(url="/rss/dashboard", status_code=status.HTTP_302_FOUND)
+    return RedirectResponse(url="/dashboard", status_code=status.HTTP_302_FOUND)
 
 @router.post("/rss/change_password")
 async def change_password(

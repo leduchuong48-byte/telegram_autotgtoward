@@ -1,12 +1,12 @@
 """
-TG Forwarder RSS Application
+Telegram AutoFoward Application
 """
 
 from fastapi import FastAPI
 from fastapi.templating import Jinja2Templates
 from .routes.auth import router as auth_router
 
-app = FastAPI(title="TG Forwarder RSS")
+app = FastAPI(title="Telegram AutoFoward")
 
 
 # 注册路由

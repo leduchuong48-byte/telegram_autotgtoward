@@ -27,7 +27,7 @@ async def process_forward_rule(client, event, chat_id, rule):
         rule: 转发规则
         
     Returns:
-        bool: 处理是否成功
+        dict: 处理结果 {ok, stop_reason, stop_reason_detail, stop_stage}
     """
     logger.info(f'使用过滤器链处理规则 ID: {rule.id}')
     
@@ -78,5 +78,16 @@ async def process_forward_rule(client, event, chat_id, rule):
     
     # 执行过滤器链
     result = await filter_chain.process(client, event, chat_id, rule)
-    
-    return result 
+    if isinstance(result, dict):
+        return {
+            "ok": bool(result.get("ok")),
+            "stop_reason": result.get("stop_reason"),
+            "stop_reason_detail": result.get("stop_reason_detail") or '',
+            "stop_stage": result.get("stop_stage") or '',
+        }
+    return {
+        "ok": bool(result),
+        "stop_reason": None,
+        "stop_reason_detail": '',
+        "stop_stage": '',
+    }

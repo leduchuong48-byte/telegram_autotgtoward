@@ -2,9 +2,9 @@ import asyncio
 import logging
 import os
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
-from typing import AsyncIterator, Dict, Optional
+from typing import Any, AsyncIterator, Callable, Dict, Optional
 
 import pytz
 from sqlalchemy.orm import joinedload, selectinload
@@ -94,6 +94,7 @@ logger = logging.getLogger(__name__)
 
 _BACKFILL_TASKS_LOCK = asyncio.Lock()
 _BACKFILL_TASKS: Dict[int, "BackfillTaskInfo"] = {}
+_BACKFILL_LAST_BY_RULE: Dict[int, Dict[str, Any]] = {}
 
 
 class BackfillEvent:
@@ -146,17 +147,103 @@ class BackfillParams:
     throttle_cooldown_threshold: int = 10
 
 
-@dataclass(frozen=True)
+@dataclass
 class BackfillTaskInfo:
     """
     回填任务控制信息（按 notify_chat_id 管理，确保同一聊天窗口只跑一个回填）。
     """
 
-    task: asyncio.Task
+    task: Optional[asyncio.Task]
     stop_event: asyncio.Event
     rule_id: int
     params: BackfillParams
     started_at: datetime
+    operation: str = "backfill"
+    notify_chat_id: Optional[int] = None
+    status: str = "running"
+    scanned: int = 0
+    processed: int = 0
+    skipped_dup: int = 0
+    not_forwarded: int = 0
+    message: str = ""
+    error: str = ""
+    skip_reasons: Dict[str, int] = field(default_factory=dict)
+    recent_reason_samples: list[Dict[str, Any]] = field(default_factory=list)
+    updated_at: Optional[datetime] = None
+    finished_at: Optional[datetime] = None
+
+
+def _format_params(info: BackfillTaskInfo) -> Dict[str, Any]:
+    payload: Dict[str, Any] = {
+        "mode": info.params.mode,
+        "limit": info.params.limit,
+        "batch_size": info.params.batch_size,
+        "batch_delay_seconds": info.params.batch_delay_seconds,
+        "message_delay_seconds": info.params.message_delay_seconds,
+        "adaptive_throttle": info.params.adaptive_throttle,
+    }
+    if info.params.start_time:
+        payload["start_time"] = info.params.start_time.strftime("%Y-%m-%d %H:%M:%S")
+    if info.params.end_time:
+        payload["end_time"] = info.params.end_time.strftime("%Y-%m-%d %H:%M:%S")
+    return payload
+
+
+def _build_status_payload(info: BackfillTaskInfo) -> Dict[str, Any]:
+    return {
+        "operation": info.operation,
+        "rule_id": info.rule_id,
+        "notify_chat_id": info.notify_chat_id,
+        "status": info.status,
+        "scanned": info.scanned,
+        "processed": info.processed,
+        "skipped_dup": info.skipped_dup,
+        "not_forwarded": info.not_forwarded,
+        "message": info.message,
+        "error": info.error,
+        "skip_reasons": dict(info.skip_reasons or {}),
+        "recent_reason_samples": list(info.recent_reason_samples or []),
+        "params": _format_params(info),
+        "started_at": info.started_at.strftime("%Y-%m-%d %H:%M:%S") if info.started_at else None,
+        "updated_at": info.updated_at.strftime("%Y-%m-%d %H:%M:%S") if info.updated_at else None,
+        "finished_at": info.finished_at.strftime("%Y-%m-%d %H:%M:%S") if info.finished_at else None,
+    }
+
+
+def _inc_reason(skip_reasons: Dict[str, int], key: str, delta: int = 1) -> None:
+    if delta <= 0:
+        return
+    skip_reasons[key] = int(skip_reasons.get(key, 0)) + int(delta)
+
+
+def _push_reason_sample(samples: list[Dict[str, Any]], reason: str, message_id: Optional[int], detail: str) -> None:
+    samples.append({
+        "reason": reason,
+        "message_id": message_id,
+        "detail": detail,
+    })
+    if len(samples) > 10:
+        del samples[:-10]
+
+
+def _normalize_stop_reason(reason: Optional[str], detail: str, stage: str = '') -> str:
+    reason = (reason or '').strip()
+    detail_lower = (detail or '').lower()
+    if reason in {'media_type', 'media_duration', 'media_size', 'keyword', 'duplicate', 'forward_failed'}:
+        return reason
+    if reason == 'filter_chain_blocked':
+        if stage == 'MediaFilter' and ('duration' in detail_lower or '时长' in detail_lower):
+            return 'media_duration'
+        if stage == 'MediaFilter' and ('size' in detail_lower or '超限' in detail_lower or '大小' in detail_lower):
+            return 'media_size'
+        if stage == 'MediaFilter' and ('type' in detail_lower or '类型' in detail_lower):
+            return 'media_type'
+        if stage == 'KeywordFilter' or 'keyword' in detail_lower or '关键字' in detail_lower:
+            return 'keyword'
+        return 'filter_chain_blocked'
+    if reason:
+        return reason
+    return 'filter_chain_blocked'
 
 
 def _get_message_text(message) -> str:
@@ -418,13 +505,30 @@ async def start_backfill_task(
     - 同一 notify_chat_id 同时只允许一个回填任务运行。
     """
     async with _BACKFILL_TASKS_LOCK:
+        for running in _BACKFILL_TASKS.values():
+            if running.rule_id == rule_id and running.task and not running.task.done():
+                return False, f"规则 {rule_id} 已有回填任务运行中，请先停止", running
+
         existing = _BACKFILL_TASKS.get(notify_chat_id)
-        if existing and not existing.task.done():
+        if existing and existing.task and not existing.task.done():
             return False, f"已有回填任务在运行（规则 {existing.rule_id}），请先 /backfill_stop", existing
 
         stop_event = asyncio.Event()
+        info = BackfillTaskInfo(
+            task=None,
+            stop_event=stop_event,
+            rule_id=rule_id,
+            params=params,
+            started_at=datetime.now(_get_timezone()),
+            operation="backfill",
+            notify_chat_id=notify_chat_id,
+            status="running",
+            message="回填任务运行中",
+            updated_at=datetime.now(_get_timezone()),
+        )
 
         async def _runner():
+            info.status = "running"
             try:
                 await run_backfill(
                     bot_client=bot_client,
@@ -433,21 +537,30 @@ async def start_backfill_task(
                     params=params,
                     notify_chat_id=notify_chat_id,
                     stop_event=stop_event,
+                    progress_callback=lambda payload: _update_task_progress(info, payload),
                 )
+                info.status = "succeeded"
+                info.message = "回填任务已完成"
+            except asyncio.CancelledError:
+                info.status = "canceled"
+                info.message = "回填任务已停止"
+                raise
+            except Exception as exc:
+                info.status = "failed"
+                info.error = str(exc)
+                info.message = f"回填任务失败: {str(exc)}"
             finally:
+                now = datetime.now(_get_timezone())
+                info.updated_at = now
+                info.finished_at = now
+                _BACKFILL_LAST_BY_RULE[info.rule_id] = _build_status_payload(info)
                 async with _BACKFILL_TASKS_LOCK:
                     current = _BACKFILL_TASKS.get(notify_chat_id)
                     if current and current.task is asyncio.current_task():
                         _BACKFILL_TASKS.pop(notify_chat_id, None)
 
         task = asyncio.create_task(_runner())
-        info = BackfillTaskInfo(
-            task=task,
-            stop_event=stop_event,
-            rule_id=rule_id,
-            params=params,
-            started_at=datetime.now(_get_timezone()),
-        )
+        info.task = task
         _BACKFILL_TASKS[notify_chat_id] = info
         return True, "已启动回填任务", info
 
@@ -465,11 +578,27 @@ async def start_video_forward_task(
     启动“转发全部视频”任务并登记，以便 /backfill_stop 中断。
     """
     async with _BACKFILL_TASKS_LOCK:
+        for running in _BACKFILL_TASKS.values():
+            if running.rule_id == rule_id and running.task and not running.task.done():
+                return False, f"规则 {rule_id} 已有任务运行中，请先停止", running
+
         existing = _BACKFILL_TASKS.get(notify_chat_id)
-        if existing and not existing.task.done():
+        if existing and existing.task and not existing.task.done():
             return False, f"已有任务在运行（规则 {existing.rule_id}），请先 /backfill_stop", existing
 
         stop_event = asyncio.Event()
+        info = BackfillTaskInfo(
+            task=None,
+            stop_event=stop_event,
+            rule_id=rule_id,
+            params=params,
+            started_at=datetime.now(_get_timezone()),
+            operation="video_forward",
+            notify_chat_id=notify_chat_id,
+            status="running",
+            message="视频转发任务运行中",
+            updated_at=datetime.now(_get_timezone()),
+        )
 
         async def _runner():
             try:
@@ -481,21 +610,30 @@ async def start_video_forward_task(
                     params=params,
                     notify_chat_id=notify_chat_id,
                     stop_event=stop_event,
+                    progress_callback=lambda payload: _update_task_progress(info, payload),
                 )
+                info.status = "succeeded"
+                info.message = "视频转发任务已完成"
+            except asyncio.CancelledError:
+                info.status = "canceled"
+                info.message = "视频转发任务已停止"
+                raise
+            except Exception as exc:
+                info.status = "failed"
+                info.error = str(exc)
+                info.message = f"视频转发任务失败: {str(exc)}"
             finally:
+                now = datetime.now(_get_timezone())
+                info.updated_at = now
+                info.finished_at = now
+                _BACKFILL_LAST_BY_RULE[info.rule_id] = _build_status_payload(info)
                 async with _BACKFILL_TASKS_LOCK:
                     current = _BACKFILL_TASKS.get(notify_chat_id)
                     if current and current.task is asyncio.current_task():
                         _BACKFILL_TASKS.pop(notify_chat_id, None)
 
         task = asyncio.create_task(_runner())
-        info = BackfillTaskInfo(
-            task=task,
-            stop_event=stop_event,
-            rule_id=rule_id,
-            params=params,
-            started_at=datetime.now(_get_timezone()),
-        )
+        info.task = task
         _BACKFILL_TASKS[notify_chat_id] = info
         return True, "已启动视频转发任务", info
 
@@ -508,14 +646,64 @@ async def stop_backfill_task(*, notify_chat_id: int) -> tuple[bool, str, Optiona
     """
     async with _BACKFILL_TASKS_LOCK:
         info = _BACKFILL_TASKS.get(notify_chat_id)
-        if not info or info.task.done():
-            if info and info.task.done():
+        if not info or not info.task or info.task.done():
+            if info and info.task and info.task.done():
                 _BACKFILL_TASKS.pop(notify_chat_id, None)
             return False, "当前没有正在运行的回填任务", None
 
         info.stop_event.set()
-        info.task.cancel()
+        info.status = "cancel_requested"
+        info.message = "已请求停止任务"
+        info.updated_at = datetime.now(_get_timezone())
+        if info.task:
+            info.task.cancel()
         return True, f"已请求停止回填任务（规则 {info.rule_id}），请稍候…", info
+
+
+def _update_task_progress(info: BackfillTaskInfo, payload: Dict[str, Any]) -> None:
+    info.scanned = int(payload.get("scanned", info.scanned))
+    info.processed = int(payload.get("processed", info.processed))
+    info.skipped_dup = int(payload.get("skipped_dup", info.skipped_dup))
+    info.not_forwarded = int(payload.get("not_forwarded", info.not_forwarded))
+    info.message = payload.get("message") or info.message
+    incoming_reasons = payload.get("skip_reasons") or {}
+    if isinstance(incoming_reasons, dict):
+        info.skip_reasons = {k: int(v) for k, v in incoming_reasons.items()}
+
+    incoming_samples = payload.get("recent_reason_samples")
+    if isinstance(incoming_samples, list):
+        info.recent_reason_samples = [item for item in incoming_samples if isinstance(item, dict)][-10:]
+
+    info.updated_at = datetime.now(_get_timezone())
+
+
+async def get_backfill_status(*, rule_id: int) -> Dict[str, Any]:
+    async with _BACKFILL_TASKS_LOCK:
+        running = [
+            info for info in _BACKFILL_TASKS.values()
+            if info.rule_id == rule_id and info.task and not info.task.done()
+        ]
+        if running:
+            return {"active": True, "task": _build_status_payload(running[0])}
+
+    last = _BACKFILL_LAST_BY_RULE.get(rule_id)
+    if last:
+        return {"active": False, "task": last}
+    return {"active": False, "task": None}
+
+
+async def stop_backfill_task_by_rule(*, rule_id: int) -> tuple[bool, str, Optional[BackfillTaskInfo]]:
+    async with _BACKFILL_TASKS_LOCK:
+        for info in _BACKFILL_TASKS.values():
+            if info.rule_id == rule_id and info.task and not info.task.done():
+                info.stop_event.set()
+                info.status = "cancel_requested"
+                info.message = "已请求停止任务"
+                info.updated_at = datetime.now(_get_timezone())
+                if info.task:
+                    info.task.cancel()
+                return True, f"已请求停止回填任务（规则 {rule_id}），请稍候…", info
+    return False, "当前规则没有正在运行的回填任务", None
 
 
 def _get_timezone():
@@ -616,6 +804,7 @@ async def run_backfill(
     params: BackfillParams,
     notify_chat_id: Optional[int] = None,
     stop_event: Optional[asyncio.Event] = None,
+    progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
 ):
     rule = _load_rule_for_processing(rule_id)
     if not rule:
@@ -667,6 +856,8 @@ async def run_backfill(
     skipped_dup = 0
     processed = 0
     not_forwarded = 0
+    skip_reasons: Dict[str, int] = {}
+    recent_reason_samples: list[Dict[str, Any]] = []
 
     if notify_chat_id:
         try:
@@ -699,8 +890,17 @@ async def run_backfill(
                 break
 
             scanned += 1
+            if progress_callback:
+                progress_callback({
+                    "scanned": scanned,
+                    "processed": processed,
+                    "skipped_dup": skipped_dup,
+                    "not_forwarded": not_forwarded,
+                    "message": "回填处理中",
+                })
 
             event = BackfillEvent(message, user_client)
+            dedup_key = None
             try:
                 dedup_key = build_dedup_key(event)
                 if not dedup_key:
@@ -708,11 +908,27 @@ async def run_backfill(
 
                 if is_processed(rule.id, dedup_key):
                     skipped_dup += 1
+                    _inc_reason(skip_reasons, "duplicate")
+                    _push_reason_sample(recent_reason_samples, "duplicate", getattr(message, "id", None), "message already processed")
                     continue
 
                 flood_wait_seconds = None
+                stop_reason = None
+                stop_reason_detail = ''
+                stop_stage = ''
                 if rule.use_bot:
-                    ok = await process_forward_rule(bot_client, event, str(source_chat_id), rule)
+                    result = await process_forward_rule(bot_client, event, str(source_chat_id), rule)
+                    if isinstance(result, dict):
+                        ok = bool(result.get('ok'))
+                        stop_stage = result.get('stop_stage') or ''
+                        stop_reason = _normalize_stop_reason(
+                            result.get('stop_reason'),
+                            result.get('stop_reason_detail') or '',
+                            stop_stage,
+                        )
+                        stop_reason_detail = result.get('stop_reason_detail') or ''
+                    else:
+                        ok = bool(result)
                 else:
                     ok, flood_wait_seconds = await user_handler.process_forward_rule(
                         user_client, event, str(source_chat_id), rule
@@ -732,6 +948,17 @@ async def run_backfill(
                             throttle.on_success()
                 else:
                     not_forwarded += 1
+                    bucket = _normalize_stop_reason(stop_reason, stop_reason_detail, stop_stage)
+                    _inc_reason(skip_reasons, bucket)
+                    detail = stop_reason_detail or "process_forward_rule returned false"
+                    if stop_stage:
+                        detail = f"{stop_stage}: {detail}"
+                    _push_reason_sample(
+                        recent_reason_samples,
+                        bucket,
+                        getattr(message, "id", None),
+                        detail,
+                    )
                     if throttle:
                         if flood_wait_seconds:
                             throttle.on_flood_wait(flood_wait_seconds)
@@ -743,6 +970,13 @@ async def run_backfill(
             except Exception as e:
                 logger.error(f"回填处理消息失败: rule={rule.id}, key={dedup_key}, err={str(e)}")
                 not_forwarded += 1
+                err_text = str(e)
+                if "FloodWait" in err_text:
+                    _inc_reason(skip_reasons, "forward_failed")
+                    _push_reason_sample(recent_reason_samples, "forward_failed", getattr(message, "id", None), err_text)
+                else:
+                    _inc_reason(skip_reasons, "unknown")
+                    _push_reason_sample(recent_reason_samples, "unknown", getattr(message, "id", None), err_text)
                 if throttle:
                     throttle.on_failure()
 
@@ -766,6 +1000,16 @@ async def run_backfill(
                 logger.info(
                     f"回填进度：已扫描 {scanned}，已处理 {processed}，已跳过 {skipped_dup}，未转发 {not_forwarded}"
                 )
+            if progress_callback:
+                progress_callback({
+                    "scanned": scanned,
+                    "processed": processed,
+                    "skipped_dup": skipped_dup,
+                    "not_forwarded": not_forwarded,
+                    "skip_reasons": skip_reasons,
+                    "recent_reason_samples": recent_reason_samples,
+                    "message": "回填处理中",
+                })
     except asyncio.CancelledError:
         stopped = True
 
@@ -791,6 +1035,16 @@ async def run_backfill(
         logger.info(
             f"回填完成：已扫描 {scanned}，已处理 {processed}，已跳过 {skipped_dup}，未转发 {not_forwarded}"
         )
+    if progress_callback:
+        progress_callback({
+            "scanned": scanned,
+            "processed": processed,
+            "skipped_dup": skipped_dup,
+            "not_forwarded": not_forwarded,
+            "skip_reasons": skip_reasons,
+            "recent_reason_samples": recent_reason_samples,
+            "message": "回填已停止" if stopped else "回填已完成",
+        })
 
 
 async def run_video_forward(
@@ -802,6 +1056,7 @@ async def run_video_forward(
     params: BackfillParams,
     notify_chat_id: Optional[int] = None,
     stop_event: Optional[asyncio.Event] = None,
+    progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
 ):
     rule = _load_rule_for_processing(rule_id)
     if not rule:
@@ -858,6 +1113,8 @@ async def run_video_forward(
     skipped_keyword = 0
     processed = 0
     not_forwarded = 0
+    skip_reasons: Dict[str, int] = {}
+    recent_reason_samples: list[Dict[str, Any]] = []
     allow_over_limit_fallback_to_user = _get_env_bool(
         "VIDEO_FORWARD_OVER_LIMIT_FALLBACK_TO_USER",
         False,
@@ -897,8 +1154,17 @@ async def run_video_forward(
                 break
 
             scanned += 1
+            if progress_callback:
+                progress_callback({
+                    "scanned": scanned,
+                    "processed": processed,
+                    "skipped_dup": skipped_dup,
+                    "not_forwarded": not_forwarded,
+                    "message": "视频转发处理中",
+                })
 
             event = BackfillEvent(message, user_client)
+            dedup_key = None
             try:
                 dedup_key = build_dedup_key(event)
                 if not dedup_key:
@@ -906,6 +1172,8 @@ async def run_video_forward(
 
                 if is_processed(rule.id, dedup_key):
                     skipped_dup += 1
+                    _inc_reason(skip_reasons, "duplicate")
+                    _push_reason_sample(recent_reason_samples, "duplicate", getattr(message, "id", None), "message already processed")
                     continue
 
                 grouped_id = getattr(message, "grouped_id", None)
@@ -920,6 +1188,8 @@ async def run_video_forward(
                     video_messages = [item for item in group_messages if _is_video_message(item)]
                     if not video_messages:
                         skipped_non_video += 1
+                        _inc_reason(skip_reasons, "media_type")
+                        _push_reason_sample(recent_reason_samples, "media_type", getattr(message, "id", None), "media group has no video")
                         continue
 
                     passed_videos = []
@@ -930,6 +1200,8 @@ async def run_video_forward(
                         else:
                             over_limit_videos.append(item)
                     if not passed_videos and not over_limit_videos:
+                        _inc_reason(skip_reasons, "media_type")
+                        _push_reason_sample(recent_reason_samples, "media_type", getattr(message, "id", None), "no media passed filter in group")
                         continue
                     message_text = _extract_group_text(group_messages)
                     use_merge_caption = bool(message_text)
@@ -938,6 +1210,8 @@ async def run_video_forward(
                 else:
                     if not _is_video_message(message):
                         skipped_non_video += 1
+                        _inc_reason(skip_reasons, "media_type")
+                        _push_reason_sample(recent_reason_samples, "media_type", getattr(message, "id", None), "single message is not video")
                         continue
                     if await _passes_media_filters(rule, message):
                         pass_message_ids = [message.id]
@@ -948,6 +1222,8 @@ async def run_video_forward(
                 should_forward = await check_keywords(rule, message_text, event)
                 if not should_forward:
                     skipped_keyword += 1
+                    _inc_reason(skip_reasons, "keyword")
+                    _push_reason_sample(recent_reason_samples, "keyword", getattr(message, "id", None), "keyword filter blocked")
                     continue
 
                 if over_message_ids:
@@ -957,12 +1233,16 @@ async def run_video_forward(
                         )
                     else:
                         skipped_media_filter += len(over_message_ids)
+                        _inc_reason(skip_reasons, "media_size", len(over_message_ids))
+                        _push_reason_sample(recent_reason_samples, "media_size", getattr(message, "id", None), f"{len(over_message_ids)} media over size limit")
                         logger.info(
                             f"规则 {rule.id} 媒体超限 {len(over_message_ids)} 条，严格模式下跳过，不降级到用户账号转发"
                         )
                         over_message_ids = []
 
                 if not pass_message_ids and not over_message_ids:
+                    _inc_reason(skip_reasons, "filter_chain_blocked")
+                    _push_reason_sample(recent_reason_samples, "filter_chain_blocked", getattr(message, "id", None), "all candidate media removed")
                     continue
 
                 if use_merge_caption and (pass_message_ids or over_message_ids):
@@ -1033,6 +1313,8 @@ async def run_video_forward(
                             throttle.on_success()
                 else:
                     not_forwarded += 1
+                    _inc_reason(skip_reasons, "forward_failed")
+                    _push_reason_sample(recent_reason_samples, "forward_failed", getattr(message, "id", None), "forward api returned false")
                     if throttle:
                         if flood_wait_seconds:
                             throttle.on_flood_wait(flood_wait_seconds)
@@ -1044,6 +1326,8 @@ async def run_video_forward(
             except Exception as e:
                 logger.error(f"视频转发处理消息失败: rule={rule.id}, err={str(e)}")
                 not_forwarded += 1
+                _inc_reason(skip_reasons, "unknown")
+                _push_reason_sample(recent_reason_samples, "unknown", getattr(message, "id", None), str(e))
                 if throttle:
                     throttle.on_failure()
 
@@ -1081,6 +1365,16 @@ async def run_video_forward(
                     skipped_dup,
                     not_forwarded,
                 )
+            if progress_callback:
+                progress_callback({
+                    "scanned": scanned,
+                    "processed": processed,
+                    "skipped_dup": skipped_dup,
+                    "not_forwarded": not_forwarded,
+                    "skip_reasons": skip_reasons,
+                    "recent_reason_samples": recent_reason_samples,
+                    "message": "视频转发处理中",
+                })
     except asyncio.CancelledError:
         stopped = True
 
@@ -1135,3 +1429,13 @@ async def run_video_forward(
             skipped_dup,
             not_forwarded,
         )
+    if progress_callback:
+        progress_callback({
+            "scanned": scanned,
+            "processed": processed,
+            "skipped_dup": skipped_dup,
+            "not_forwarded": not_forwarded,
+            "skip_reasons": skip_reasons,
+            "recent_reason_samples": recent_reason_samples,
+            "message": "视频转发已停止" if stopped else "视频转发已完成",
+        })

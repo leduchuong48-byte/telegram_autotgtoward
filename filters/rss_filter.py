@@ -48,6 +48,9 @@ class RSSFilter(BaseFilter):
             return True
         
         if not context.should_forward:
+            if not getattr(context, 'stop_reason', None):
+                context.stop_reason = 'filter_chain_blocked'
+                context.stop_reason_detail = 'context.should_forward is false before RSS stage'
             return False
         
         db_ops = await get_db_ops()
@@ -122,6 +125,9 @@ class RSSFilter(BaseFilter):
         
         if rule.only_rss:
             logger.info('只转发到RSS，RSS过滤器已完成，结束过滤链')
+            if not getattr(context, 'stop_reason', None):
+                context.stop_reason = 'rss_only'
+                context.stop_reason_detail = 'rule configured as only_rss'
             return False
         
         return True

@@ -25,7 +25,7 @@ RULES_PER_PAGE = int(os.getenv('RULES_PER_PAGE', 20))
 PUSH_CHANNEL_PER_PAGE = int(os.getenv('PUSH_CHANNEL_PER_PAGE', 10))
 
 DEFAULT_TIMEZONE = os.getenv('DEFAULT_TIMEZONE', 'Asia/Shanghai')
-PROJECT_NAME = os.getenv('PROJECT_NAME', 'TG Forwarder RSS')
+PROJECT_NAME = os.getenv('PROJECT_NAME', 'Telegram AutoFoward')
 # RSS相关路径配置
 RSS_MEDIA_PATH = os.getenv('RSS_MEDIA_PATH', './rss/media')
 

@@ -15,11 +15,9 @@ class ConfigManager:
         self._lock = threading.RLock()
         self._logger = logging.getLogger(__name__)
         self._handlers: list[Callable[[dict], None]] = []
-        self._config_path = Path(
-            config_path
-            or os.getenv("CONFIG_FILE_PATH")
-            or "./config.json"
-        ).resolve()
+        default_path = os.getenv("CONFIG_FILE_PATH") or "./config/config.json"
+        self._config_path = Path(config_path or default_path).resolve()
+        self._legacy_path = Path("./config.json").resolve()
         self.settings: dict = {}
         self._ensure_parent_dir()
         self._load_from_disk()
@@ -36,11 +34,17 @@ class ConfigManager:
     def _load_from_disk(self) -> dict:
         should_persist = False
         if not self._config_path.exists():
-            data = {}
-            should_persist = True
-        else:
+            if self._legacy_path.exists() and self._legacy_path != self._config_path:
+                shutil.copy2(self._legacy_path, self._config_path)
+                self._logger.info("Migrated legacy config from %s to %s", self._legacy_path, self._config_path)
+            else:
+                should_persist = True
+
+        if self._config_path.exists():
             with self._config_path.open("r", encoding="utf-8") as handle:
                 data = json.load(handle)
+        else:
+            data = {}
         if not isinstance(data, dict):
             raise ValueError("Config file must contain a JSON object")
         data, defaults_persist = self._apply_defaults(data)
@@ -59,13 +63,15 @@ class ConfigManager:
             return self._load_from_disk()
 
     def _ensure_invite_code(self, data: dict) -> tuple[dict, bool]:
-        env_invite = (os.getenv("INVITE_CODE") or "").strip()
-        if env_invite:
-            data["INVITE_CODE"] = env_invite
-            return data, False
         invite = (data.get("INVITE_CODE") or "").strip()
         if invite:
             return data, False
+
+        env_invite = (os.getenv("INVITE_CODE") or "").strip()
+        if env_invite:
+            data["INVITE_CODE"] = env_invite
+            return data, True
+
         data["INVITE_CODE"] = secrets.token_urlsafe(24)
         return data, True
 
@@ -76,6 +82,7 @@ class ConfigManager:
                 "api_hash": "",
                 "bot_token": "",
                 "phone": "",
+                "user_id": "",
             },
             "ai_service": {
                 "enabled": False,
@@ -104,6 +111,28 @@ class ConfigManager:
             data = self._load_from_disk()
             return data.get("INVITE_CODE", "")
 
+
+    def set_invite_code(self, invite_code: str) -> str:
+        cleaned = (invite_code or "").strip()
+        if not cleaned:
+            raise ValueError("Invite code cannot be empty")
+
+        with self._lock:
+            config = self._load_from_disk()
+            config["INVITE_CODE"] = cleaned
+            self._apply_defaults(config)
+            self._backup_config()
+            with self._config_path.open("w", encoding="utf-8") as handle:
+                json.dump(config, handle, indent=2, ensure_ascii=True)
+            self.settings = config
+            self._logger.info("Invite code updated at %s", self._config_path)
+            return cleaned
+
+    def rotate_invite_code(self) -> str:
+        new_code = secrets.token_urlsafe(24)
+        self.set_invite_code(new_code)
+        return new_code
+
     def _backup_config(self) -> None:
         timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
         backup_name = f"{self._config_path.name}.bak.{timestamp}"
@@ -125,10 +154,7 @@ class ConfigManager:
         with self._lock:
             self._ensure_parent_dir()
             current = self._load_from_disk()
-            env_invite = (os.getenv("INVITE_CODE") or "").strip()
-            if env_invite:
-                new_config["INVITE_CODE"] = env_invite
-            elif not (new_config.get("INVITE_CODE") or "").strip():
+            if not (new_config.get("INVITE_CODE") or "").strip():
                 fallback_invite = (current.get("INVITE_CODE") or "").strip()
                 new_config["INVITE_CODE"] = fallback_invite or secrets.token_urlsafe(24)
             new_config, _ = self._apply_defaults(new_config)

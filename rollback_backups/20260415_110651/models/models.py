@@ -12,10 +12,6 @@ load_dotenv()
 Base = declarative_base()
 
 
-def _enum_values(enum_cls):
-    return [member.value for member in enum_cls]
-
-
 def get_database_url():
     return os.getenv('DATABASE_URL', 'sqlite:///./db/forward.db')
 
@@ -83,19 +79,11 @@ class ForwardRule(Base):
     media_type_filter_mode = Column(Enum(AddMode), nullable=False, default=AddMode.BLACKLIST)  # 媒体类型过滤模式
     enable_media_size_filter = Column(Boolean, default=False)  # 是否启用媒体大小过滤
     max_media_size = Column(Integer, default=os.getenv('DEFAULT_MAX_MEDIA_SIZE', 10))  # 媒体大小限制，单位MB
-    media_size_filter_mode = Column(
-        Enum(CompareMode, values_callable=_enum_values, native_enum=False),
-        nullable=False,
-        default=CompareMode.LESS,
-    )  # 媒体大小过滤模式
+    media_size_filter_mode = Column(Enum(CompareMode), nullable=False, default=CompareMode.LESS)  # 媒体大小过滤模式
     is_send_over_media_size_message = Column(Boolean, default=True)  # 超过限制的媒体是否发送提示消息
     enable_media_duration_filter = Column(Boolean, default=False)  # 是否启用媒体时长过滤
     media_duration_minutes = Column(Integer, default=10)  # 媒体时长阈值，单位分钟
-    media_duration_filter_mode = Column(
-        Enum(CompareMode, values_callable=_enum_values, native_enum=False),
-        nullable=False,
-        default=CompareMode.LESS,
-    )  # 媒体时长过滤模式
+    media_duration_filter_mode = Column(Enum(CompareMode), nullable=False, default=CompareMode.LESS)  # 媒体时长过滤模式
     enable_extension_filter = Column(Boolean, default=False)  # 是否启用媒体扩展名过滤
     extension_filter_mode = Column(Enum(AddMode), nullable=False, default=AddMode.BLACKLIST)  # 媒体扩展名过滤模式，默认黑名单
     enable_reverse_blacklist = Column(Boolean, default=False)  # 是否反转黑名单
@@ -461,48 +449,26 @@ def migrate_db(engine):
                 except Exception as e:
                     logging.error(f'添加列 {column} 时出错: {str(e)}')
 
-        # 启动自检：修正 CompareMode 历史脏值，防止 ORM 枚举解析失败
+        # 兼容旧数据的大小/时长筛选模式
         if 'media_size_filter_mode' in forward_rules_columns:
             try:
-                normalized = connection.execute(
+                connection.execute(
                     text(
-                        "UPDATE forward_rules SET media_size_filter_mode = lower(trim(media_size_filter_mode)) "
-                        "WHERE media_size_filter_mode IS NOT NULL"
+                        "UPDATE forward_rules SET media_size_filter_mode='less' "
+                        "WHERE media_size_filter_mode='LESS'"
                     )
                 )
-                sanitized = connection.execute(
-                    text(
-                        "UPDATE forward_rules SET media_size_filter_mode = 'less' "
-                        "WHERE media_size_filter_mode IS NULL "
-                        "OR media_size_filter_mode NOT IN ('less', 'greater')"
-                    )
-                )
-                if (normalized.rowcount and normalized.rowcount > 0) or (sanitized.rowcount and sanitized.rowcount > 0):
-                    logging.warning(
-                        f"CompareMode自检(media_size_filter_mode): 标准化 {normalized.rowcount or 0} 条, 兜底修复 {sanitized.rowcount or 0} 条"
-                    )
             except Exception as e:
                 logging.error(f'修正 media_size_filter_mode 旧值时出错: {str(e)}')
 
         if 'media_duration_filter_mode' in forward_rules_columns:
             try:
-                normalized = connection.execute(
+                connection.execute(
                     text(
-                        "UPDATE forward_rules SET media_duration_filter_mode = lower(trim(media_duration_filter_mode)) "
-                        "WHERE media_duration_filter_mode IS NOT NULL"
+                        "UPDATE forward_rules SET media_duration_filter_mode='less' "
+                        "WHERE media_duration_filter_mode='LESS'"
                     )
                 )
-                sanitized = connection.execute(
-                    text(
-                        "UPDATE forward_rules SET media_duration_filter_mode = 'less' "
-                        "WHERE media_duration_filter_mode IS NULL "
-                        "OR media_duration_filter_mode NOT IN ('less', 'greater')"
-                    )
-                )
-                if (normalized.rowcount and normalized.rowcount > 0) or (sanitized.rowcount and sanitized.rowcount > 0):
-                    logging.warning(
-                        f"CompareMode自检(media_duration_filter_mode): 标准化 {normalized.rowcount or 0} 条, 兜底修复 {sanitized.rowcount or 0} 条"
-                    )
             except Exception as e:
                 logging.error(f'修正 media_duration_filter_mode 旧值时出错: {str(e)}')
                     

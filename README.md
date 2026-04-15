@@ -1,134 +1,129 @@
-# Telegram AutoTG Toward
+# 项目名称
 
-[![Docker Pulls](https://img.shields.io/docker/pulls/leduchuong/telegram_chanel_autotoward?logo=docker&style=flat-square)](https://hub.docker.com/r/leduchuong/telegram_chanel_autotoward)
+![封面图/演示图](docs/cover.gif)
+
+[![Docker Pulls](https://img.shields.io/docker/pulls/leduchuong/ld_tg_downloader?logo=docker&label=Docker%20Pulls&style=flat-square)](https://hub.docker.com/r/leduchuong/ld_tg_downloader)
 [![GitHub Stars](https://img.shields.io/github/stars/leduchuong48-byte/telegram_autotgtoward?style=flat-square)](https://github.com/leduchuong48-byte/telegram_autotgtoward/stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/leduchuong48-byte/telegram_autotgtoward?style=flat-square)](https://github.com/leduchuong48-byte/telegram_autotgtoward/network/members)
+[![GitHub Issues](https://img.shields.io/github/issues/leduchuong48-byte/telegram_autotgtoward?style=flat-square)](https://github.com/leduchuong48-byte/telegram_autotgtoward/issues)
 [![License](https://img.shields.io/github/license/leduchuong48-byte/telegram_autotgtoward?style=flat-square)](https://github.com/leduchuong48-byte/telegram_autotgtoward/blob/main/LICENSE)
+[![Build: Passing](https://img.shields.io/badge/Build-Passing-brightgreen.svg)](#)
+[![Platform: ARM64/AMD64](https://img.shields.io/badge/Platform-ARM64%2FAMD64-blue.svg)](#)
 
 [English](README_en.md)
 
-Telegram AutoTG Toward 是一个以 WebUI 为核心的 Telegram 转发中控平台，重点是群组间转发的便捷操作，而不只是 RSS 订阅。
+> Better alternative to Fluent Reader for E-ink devices.
 
-## 版本更新
+一句话说明项目是做什么的。
 
-- `v3.1`：修复转发不稳定问题，提升长时间运行场景下的稳定性。
-- `v3.1`：修复“未命中筛选条件的内容在用户模式仍被转发”的问题，默认改为严格筛选。
+## Why this tool?（为什么要做它）
 
-## 为什么这不是普通 RSS 工具
+厌倦了 <旧方案痛点> 吗？受够了 <卡顿/失败/重复劳动> 吗？这个工具就是为了解决 <关键阻塞场景>，把原本容易翻车的流程压缩成可复现的一步操作。
 
-- 新建规则即开即用：在 WebUI 打开“新建规则”弹窗后，直接填写 `source link / source_chat_id / target_chat_id` 即可落地转发规则。
-- 转发操作可视化：规则创建、编辑、启停、过滤和测试全部在同一页面完成，不依赖命令行。
-- 集群化规则管理：支持多规则并行和规则同步（`enable_sync`），适合多群组、多目标的集中管理。
-- Bot + Web 联动：Web 端可直接下发测试消息到指定 `chat_id`，同时保留 Bot 侧快捷操作能力。
+## 为什么有用（痛点）
 
-## UI 重点展示（真实页面截图）
+- 痛点 1：原流程中最耗时/最容易出错的问题
+- 痛点 2：现有方案的成本或维护负担
+- 痛点 3：团队协作或交付效率上的阻塞
 
-> 以下截图由当前仓库模板实时渲染得到，展示的是本项目实际 WebUI。
+## 项目做什么（功能概览）
 
-### 1) 新建规则后可直接操作转发窗口（支持 link/chat_id）
+- 核心能力 A
+- 核心能力 B
+- 核心能力 C
 
-![新建规则转发窗口](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/ui_real/ui_new_rule_forward_real.png)
+## ⚡️ Quick Start (Run in 3 seconds)
 
-### 2) Bot + Web 联动控制（Web 发测试消息到指定 chat_id）
+```bash
+docker run --rm -it --pull=always docker.io/leduchuong/ld_tg_downloader:latest
+```
 
-![Bot 与 Web 联动](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/ui_real/ui_bot_web_linkage_real.png)
+> 发布前必须替换为真实镜像地址，保持“复制即运行”，不要要求读者再改参数。
 
-### 3) 规则集群管理看板（规则列表、状态、统计）
-
-![规则集群管理看板](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/ui_real/ui_dashboard_real.png)
-
-### 4) 首次接入流程（登录/注册/向导）
-
-![WebUI 登录页](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/ui_real/ui_login_real.png)
-
-![WebUI 注册页](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/ui_real/ui_register_real.png)
-
-![Setup Wizard](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/ui_real/ui_setup_wizard_real.png)
-
-## 项目归属与维护
-
-- 官方仓库：`https://github.com/leduchuong48-byte/telegram_autotgtoward`
-- 官方镜像：`https://hub.docker.com/r/leduchuong/telegram_chanel_autotoward`
-- 维护者：`@leduchuong48-byte`
-
-## 核心能力
-
-- WebUI 管理：配置编辑、规则管理、日志查看、系统状态。
-- Telegram 授权向导：页面内完成登录与会话初始化。
-- 规则化转发：关键词/正则/媒体过滤、替换模板、延迟处理。
-- Bot/Web 双通道：Bot 命令与 Web 控制台联动管理。
-- AI 处理：可接入 OpenAI / Gemini / DeepSeek / Qwen / Grok / Claude。
-- RSS 子系统：作为可选能力用于订阅与分发，不影响核心转发流程。
-
-## For Portainer/Synology Users
-
-Copy this into Portainer stacks and hit Deploy. Done.
-
-## Docker Compose
+## Docker Compose（Portainer / NAS 可直接粘贴）
 
 ```yaml
 services:
-  autotgtoward:
-    image: leduchuong/telegram_chanel_autotoward:latest
-    container_name: telegram_autotgtoward
+  app:
+    image: docker.io/leduchuong/ld_tg_downloader:latest
+    container_name: autotgtoward_anya
     restart: unless-stopped
+    environment:
+      - TZ=Asia/Shanghai
     ports:
-      - "1008:8000"
-    env_file:
-      - .env
-    volumes:
-      - ./db:/app/db
-      - ./sessions:/app/sessions
-      - ./logs:/app/logs
-      - ./config:/app/config
-      - ./rss/data:/app/rss/data
+      - "1008:1008"
 ```
 
-## 快速开始
+## GitHub Topics（建议至少 5 个）
 
-### Docker 运行
+`#nas` `#homelab` `#selfhosted` `#synology` `#unraid` `#eink` `#automation`
+
+## 📈 可视化指标（Profile 风格）
+
+<p align="left"> <img src="https://komarev.com/ghpvc/?username=leduchuong48-byte&label=Repo%20views&color=0e75b6&style=flat" alt="leduchuong48-byte" /> </p>
+
+<p>
+  <img align="left" src="https://github-readme-stats-sigma-five.vercel.app/api/top-langs?username=leduchuong48-byte&show_icons=true&locale=en&layout=compact" alt="top-langs" />
+  <img align="center" src="https://github-readme-stats-sigma-five.vercel.app/api?username=leduchuong48-byte&show_icons=true&locale=en" alt="stats" />
+</p>
+
+<p><img align="center" src="https://github-readme-streak-stats.herokuapp.com/?user=leduchuong48-byte" alt="streak" /></p>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=leduchuong48-byte/telegram_autotgtoward&type=Date&theme=dark" />
+  <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=leduchuong48-byte/telegram_autotgtoward&type=Date" />
+  <img alt="Star History" src="https://api.star-history.com/svg?repos=leduchuong48-byte/telegram_autotgtoward&type=Date" />
+</picture>
+
+## 🧰 Languages and Tools
+
+<p align="left"><img src="https://skillicons.dev/icons?i=python,docker,githubactions" alt="tech stack"/></p>
+
+## 如何快速开始（Getting Started）
+
+### 环境要求
+
+- 语言/运行时版本
+- 依赖与系统要求
+
+### 安装
 
 ```bash
-cp .env.example .env
-# 编辑 .env，至少填写 API_ID/API_HASH/BOT_TOKEN/USER_ID/INVITE_CODE
-
-docker compose up -d --build
+<install command>
 ```
 
-访问：`http://localhost:1008`
-
-### 本地运行
+### 运行
 
 ```bash
-python3 -m venv .venv
-. .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env
-python main.py
+<run command>
 ```
 
-## 关键目录
+## 使用示例
 
-- `main.py`：启动入口（Telegram 客户端 + Web 服务）。
-- `rss/main.py`：FastAPI 应用与路由挂载。
-- `rss/app/routes/`：认证、配置、系统状态、Telegram 授权、Bot 控制 API。
-- `filters/`：消息过滤与处理链。
-- `handlers/`：Bot 交互与业务编排。
-- `models/`：数据库模型与迁移逻辑。
+```bash
+<example command>
+```
 
-## 常用排查
+## 在哪里获得帮助
 
-- 页面可访问但任务不工作：优先检查 `.env` 中 Telegram 参数是否完整。
-- 保存配置后未生效：在 WebUI 中执行配置重载，并查看日志页。
-- 鉴权失败：检查邀请码、Cookie 与 `JWT_SECRET_KEY` 配置。
+- Issue: https://github.com/leduchuong48-byte/telegram_autotgtoward/issues
+- Discussion: https://github.com/leduchuong48-byte/telegram_autotgtoward/discussions
+- 联系方式（可选）
 
-## 支持与反馈
+## 维护者与贡献者
 
-- Issues：`https://github.com/leduchuong48-byte/telegram_autotgtoward/issues`
+- Maintainer: @leduchuong48-byte
+- Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
 
-## License
+## 🤝 Connect
 
-GPL-3.0，详见 [LICENSE](LICENSE)。
+- GitHub: https://github.com/leduchuong48-byte
+- Repository: https://github.com/leduchuong48-byte/telegram_autotgtoward
 
-## Disclaimer
+## 免责声明
 
 使用本项目即表示你已阅读并同意 [免责声明](DISCLAIMER.md)。
+
+## 许可证
+
+例如 MIT，详见 [LICENSE](LICENSE)

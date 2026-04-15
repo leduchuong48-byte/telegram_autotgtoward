@@ -3,7 +3,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from rss.app.routes.auth import router as auth_router
-from rss.app.routes.rss import router as rss_router, rule_api_router
+from rss.app.routes.rss import router as rss_router, rule_api_router, rule_domain_router
 from rss.app.routes.system import router as system_router
 from rss.app.routes.config import router as config_router
 from rss.app.routes.bot_control import router as bot_control_router
@@ -26,7 +26,7 @@ sys.path.append(str(root_dir))
 # 获取日志记录器
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="TG Forwarder RSS")
+app = FastAPI(title="Telegram AutoFoward")
 
 # 静态资源
 static_dir = root_dir / "rss" / "app" / "static"
@@ -38,11 +38,17 @@ async def service_worker():
     return FileResponse(
         sw_path,
         media_type="application/javascript",
-        headers={"Service-Worker-Allowed": "/"}
+        headers={
+            "Service-Worker-Allowed": "/",
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        }
     )
 
 # 注册路由
 app.include_router(auth_router)
+app.include_router(rule_domain_router)
 app.include_router(rss_router)
 app.include_router(rule_api_router)
 app.include_router(feed.router)

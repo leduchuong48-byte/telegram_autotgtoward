@@ -32,44 +32,114 @@ logger = logging.getLogger(__name__)
 # 加载环境变量
 load_dotenv()
 
-# 从环境变量获取配置
-def get_required_env():
-    required_keys = ['API_ID', 'API_HASH', 'BOT_TOKEN', 'USER_ID']
-    values = {key: (os.getenv(key) or '').strip() for key in required_keys}
-    missing = [key for key, value in values.items() if not value]
-    if missing:
-        logger.error(f"缺少必要环境变量: {', '.join(missing)}")
-        raise SystemExit(1)
-
-    try:
-        api_id_value = int(values['API_ID'])
-    except ValueError:
-        logger.error('API_ID 必须为整数')
-        raise SystemExit(1)
-
-    phone_number = (os.getenv('PHONE_NUMBER') or '').strip()
-    return api_id_value, values['API_HASH'], values['BOT_TOKEN'], phone_number
-
-
-api_id, api_hash, bot_token, phone_number = get_required_env()
-
 # 创建 DBOperations 实例
 db_ops = None
 
 scheduler = None
 chat_updater = None
 
+user_client = None
+bot_client = None
+bot_token = ''
+phone_number = ''
+_runtime_signature = None
+_system_ready_lock = asyncio.Lock()
+_service_start_lock = asyncio.Lock()
+
+
+def _normalize_value(value) -> str:
+    return (value or '').strip()
+
+
+def get_telegram_settings() -> dict:
+    config = config_manager.get_config()
+    logger.info('Using config file: %s', config_manager.config_path)
+    telegram = config.get('telegram', {}) if isinstance(config.get('telegram'), dict) else {}
+
+    values = {
+        'api_id': _normalize_value(telegram.get('api_id')) or _normalize_value(os.getenv('API_ID')),
+        'api_hash': _normalize_value(telegram.get('api_hash')) or _normalize_value(os.getenv('API_HASH')),
+        'bot_token': _normalize_value(telegram.get('bot_token')) or _normalize_value(os.getenv('BOT_TOKEN')),
+        'phone': _normalize_value(telegram.get('phone')) or _normalize_value(os.getenv('PHONE_NUMBER')),
+        'user_id': _normalize_value(telegram.get('user_id')) or _normalize_value(os.getenv('USER_ID')),
+    }
+
+    for key, env_key in (
+        ('api_id', 'API_ID'),
+        ('api_hash', 'API_HASH'),
+        ('bot_token', 'BOT_TOKEN'),
+        ('phone', 'PHONE_NUMBER'),
+        ('user_id', 'USER_ID'),
+    ):
+        if values[key]:
+            os.environ[env_key] = values[key]
+
+    return values
+
+
+def has_required_telegram_config(values: dict | None = None) -> tuple[bool, list[str]]:
+    payload = values or get_telegram_settings()
+    required = {
+        'api_id': 'API_ID',
+        'api_hash': 'API_HASH',
+        'bot_token': 'BOT_TOKEN',
+        'user_id': 'USER_ID',
+    }
+    missing = [label for key, label in required.items() if not payload.get(key)]
+    return len(missing) == 0, missing
+
+
+async def initialize_runtime_from_config(force: bool = False) -> bool:
+    global user_client, bot_client, bot_token, phone_number, _runtime_signature
+
+    values = get_telegram_settings()
+    ok, missing = has_required_telegram_config(values)
+    if not ok:
+        bot_runtime.bind_clients(None, None, asyncio.get_running_loop())
+        bot_runtime.set_login_status('config_missing')
+        logger.info('Telegram 配置尚未完成，等待 WebUI 首次配置: %s', ', '.join(missing))
+        return False
+
+    try:
+        api_id_value = int(values['api_id'])
+    except ValueError:
+        bot_runtime.set_login_status('config_invalid')
+        logger.error('API_ID 必须为整数')
+        return False
+
+    if force and user_client is not None and user_client.is_connected():
+        await user_client.disconnect()
+    if force and bot_client is not None and bot_client.is_connected():
+        await bot_client.disconnect()
+
+    new_signature = (api_id_value, values['api_hash'])
+    should_recreate_clients = user_client is None or bot_client is None
+    if force and _runtime_signature is not None and _runtime_signature != new_signature:
+        should_recreate_clients = True
+
+    if should_recreate_clients:
+        user_client = TelegramClient('./sessions/user', api_id_value, values['api_hash'])
+        bot_client = TelegramClient('./sessions/bot', api_id_value, values['api_hash'])
+
+    _runtime_signature = new_signature
+    bot_token = values['bot_token']
+    phone_number = values['phone']
+    bot_runtime.bind_clients(user_client, bot_client, asyncio.get_running_loop())
+    bot_runtime.set_login_status('waiting_for_phone')
+    return True
+
 
 def schedule_forwarding_reload(_: dict | None = None) -> None:
     loop = bot_runtime.runtime_loop
     client = bot_runtime.user_client
     if loop is None or not loop.is_running() or client is None:
-        logger.warning("ForwardingService: runtime 未就绪，跳过重载")
+        logger.warning('ForwardingService: runtime 未就绪，跳过重载')
         return
     loop.call_soon_threadsafe(asyncio.create_task, forwarding_service.reload_rules(client))
 
 
 config_manager.register_reload_handler(schedule_forwarding_reload)
+logger.info('Config file path resolved to: %s', config_manager.config_path)
 
 
 async def init_db_ops():
@@ -91,10 +161,6 @@ def clear_temp_dir():
         os.remove(os.path.join('./temp', file))
 
 
-# 创建客户端
-user_client = TelegramClient('./sessions/user', api_id, api_hash)
-bot_client = TelegramClient('./sessions/bot', api_id, api_hash)
-
 # 初始化数据库
 engine = init_db()
 
@@ -106,109 +172,166 @@ async def refresh_dialog_cache(client, label):
     except Exception as e:
         logger.warning(f"{label}对话列表缓存刷新失败: {str(e)}")
 
+
 async def ensure_bot_authorized():
-    if not bot_client.is_connected():
-        await bot_client.connect()
+    current_bot = bot_runtime.bot_client
+    if current_bot is None:
+        raise RuntimeError('bot client not initialized')
+    if not current_bot.is_connected():
+        await current_bot.connect()
         bot_runtime.mark_connect()
-    if not await bot_client.is_user_authorized():
-        await bot_client.sign_in(bot_token=bot_token)
+    if not await current_bot.is_user_authorized():
+        await current_bot.sign_in(bot_token=bot_token)
 
 
 async def start_services():
     global scheduler, chat_updater
-    if bot_runtime.services_started:
-        return
+    async with _service_start_lock:
+        if bot_runtime.services_started:
+            return
 
-    await init_db_ops()
-    await ensure_bot_authorized()
-    await register_all_handlers(bot_client)
-    await forwarding_service.reload_rules(user_client)
+        current_user = bot_runtime.user_client
+        current_bot = bot_runtime.bot_client
+        if current_user is None or current_bot is None:
+            logger.warning('Telegram 客户端未初始化，跳过启动服务')
+            bot_runtime.set_runtime_reason('clients_not_initialized')
+            return
 
-    # 预解析公开群组/频道实体，预热 Access Hash 缓存
-    hardcoded_targets = [
-        # "https://t.me/你的公开群组"
-    ]
-    env_targets = os.getenv("PRE_RESOLVE_TARGETS", "")
-    targets = []
-    if env_targets:
-        targets.extend([item.strip() for item in env_targets.split(";") if item.strip()])
-    targets.extend([item for item in hardcoded_targets if item])
-
-    if targets:
-        logger.info(f"开始预解析目标实体，共 {len(targets)} 个")
-    for target in targets:
         try:
-            entity = await bot_client.get_entity(target)
-            title = getattr(entity, "title", None) or getattr(entity, "first_name", None) or str(entity)
-            logger.info(f"预解析成功: 目标={target} ID={getattr(entity, 'id', None)} 标题={title}")
-        except Exception as e:
-            logger.warning(f"预解析失败: 目标={target} err={str(e)}")
-            if isinstance(target, str) and target.isdigit():
+            await init_db_ops()
+            await ensure_bot_authorized()
+            await register_all_handlers(current_bot)
+            await forwarding_service.reload_rules(current_user)
+
+            hardcoded_targets = [
+                # "https://t.me/你的公开群组"
+            ]
+            env_targets = os.getenv('PRE_RESOLVE_TARGETS', '')
+            targets = []
+            if env_targets:
+                targets.extend([item.strip() for item in env_targets.split(';') if item.strip()])
+            targets.extend([item for item in hardcoded_targets if item])
+
+            if targets:
+                logger.info(f"开始预解析目标实体，共 {len(targets)} 个")
+            for target in targets:
                 try:
-                    fallback_id = int(f"-100{target}")
-                    entity = await bot_client.get_entity(fallback_id)
-                    title = getattr(entity, "title", None) or getattr(entity, "first_name", None) or str(entity)
-                    logger.info(f"预解析成功(补前缀): 目标={fallback_id} ID={getattr(entity, 'id', None)} 标题={title}")
-                except Exception as e2:
-                    logger.warning(f"预解析失败(补前缀): 目标={target} err={str(e2)}")
+                    entity = await current_bot.get_entity(target)
+                    title = getattr(entity, 'title', None) or getattr(entity, 'first_name', None) or str(entity)
+                    logger.info(f"预解析成功: 目标={target} ID={getattr(entity, 'id', None)} 标题={title}")
+                except Exception as e:
+                    logger.warning(f"预解析失败: 目标={target} err={str(e)}")
+                    if isinstance(target, str) and target.isdigit():
+                        try:
+                            fallback_id = int(f"-100{target}")
+                            entity = await current_bot.get_entity(fallback_id)
+                            title = getattr(entity, 'title', None) or getattr(entity, 'first_name', None) or str(entity)
+                            logger.info(f"预解析成功(补前缀): 目标={fallback_id} ID={getattr(entity, 'id', None)} 标题={title}")
+                        except Exception as e2:
+                            logger.warning(f"预解析失败(补前缀): 目标={target} err={str(e2)}")
 
-    await refresh_dialog_cache(user_client, "用户客户端")
-    await refresh_dialog_cache(bot_client, "机器人客户端")
+            await refresh_dialog_cache(current_user, '用户客户端')
+            await refresh_dialog_cache(current_bot, '机器人客户端')
 
-    # 设置消息监听器
-    await setup_listeners(user_client, bot_client, register_bot_handlers=False)
+            await setup_listeners(current_user, current_bot, register_bot_handlers=False)
+            await register_bot_commands(current_bot)
 
-    # 注册命令
-    await register_bot_commands(bot_client)
+            scheduler = SummaryScheduler(current_user, current_bot)
+            await scheduler.start()
 
-    # 创建并启动调度器
-    scheduler = SummaryScheduler(user_client, bot_client)
-    await scheduler.start()
+            chat_updater = ChatUpdater(current_user)
+            await chat_updater.start()
 
-    # 创建并启动聊天信息更新器
-    chat_updater = ChatUpdater(user_client)
-    await chat_updater.start()
+            await send_welcome_message(current_bot)
 
-    # 发送欢迎消息
-    await send_welcome_message(bot_client)
+            bot_runtime.mark_services_started()
+            bot_runtime.set_login_status('logged_in')
+            bot_runtime.set_runtime_reason('')
+        except Exception as exc:
+            bot_runtime.mark_services_stopped()
+            bot_runtime.set_login_status('waiting_for_phone')
+            reason = f'service_start_failed:{exc}'
+            if 'database is locked' in str(exc).lower():
+                reason = 'db_locked'
+            bot_runtime.set_runtime_reason(reason)
+            logger.exception('start_services failed: %s', exc)
+            raise
 
-    bot_runtime.mark_services_started()
-    bot_runtime.set_login_status("logged_in")
+async def ensure_system_ready(force_runtime_init: bool = False) -> bool:
+    async with _system_ready_lock:
+        initialized = await initialize_runtime_from_config(force=force_runtime_init)
+        if not initialized:
+            bot_runtime.mark_services_stopped()
+            bot_runtime.set_runtime_reason('missing_config')
+            return False
+
+        current_user = bot_runtime.user_client
+        if current_user is None:
+            bot_runtime.mark_services_stopped()
+            bot_runtime.set_login_status('config_missing')
+            bot_runtime.set_runtime_reason('missing_user_client')
+            return False
+
+        if not current_user.is_connected():
+            await current_user.connect()
+            bot_runtime.mark_connect()
+
+        await ensure_bot_authorized()
+
+        if not await current_user.is_user_authorized():
+            bot_runtime.mark_services_stopped()
+            bot_runtime.set_login_status('waiting_for_phone')
+            bot_runtime.set_runtime_reason('user_auth_required')
+            return False
+
+        await start_services()
+
+        if bot_runtime.services_started:
+            bot_runtime.set_login_status('logged_in')
+            bot_runtime.set_runtime_reason('')
+            return True
+
+        bot_runtime.set_runtime_reason('service_not_started')
+        return False
 
 
 async def bootstrap_clients():
-    bot_runtime.set_login_status("waiting_for_phone")
     try:
-        await user_client.connect()
-        bot_runtime.mark_connect()
-        await ensure_bot_authorized()
-        if await user_client.is_user_authorized():
-            bot_runtime.set_login_status("logged_in")
-            await start_services()
-        else:
-            bot_runtime.set_login_status("waiting_for_phone")
+        await ensure_system_ready()
     except Exception as exc:
-        logger.error(f"启动 Telegram 客户端失败: {str(exc)}")
-        bot_runtime.set_login_status("waiting_for_phone")
+        logger.error(f'启动 Telegram 客户端失败: {str(exc)}')
+        bot_runtime.mark_services_stopped()
+        bot_runtime.set_login_status('waiting_for_phone')
+        bot_runtime.set_runtime_reason(f'bootstrap_failed:{exc}')
 
 
 async def shutdown_services():
+    global scheduler, chat_updater
+
     if db_ops and hasattr(db_ops, 'close'):
         await db_ops.close()
     if scheduler:
         scheduler.stop()
+        scheduler = None
     if chat_updater:
         chat_updater.stop()
-    if user_client.is_connected():
-        await user_client.disconnect()
-    if bot_client.is_connected():
-        await bot_client.disconnect()
+        chat_updater = None
+
+    current_user = bot_runtime.user_client
+    current_bot = bot_runtime.bot_client
+
+    if current_user is not None and current_user.is_connected():
+        await current_user.disconnect()
+    if current_bot is not None and current_bot.is_connected():
+        await current_bot.disconnect()
     bot_runtime.mark_services_stopped()
 
 
 async def run_app():
-    bot_runtime.bind_clients(user_client, bot_client, asyncio.get_running_loop())
+    bot_runtime.bind_clients(None, None, asyncio.get_running_loop())
     bot_runtime.set_login_handler(start_services)
+    bot_runtime.set_runtime_initializer(initialize_runtime_from_config)
+    bot_runtime.set_service_stopper(shutdown_services)
 
     rss_host = os.getenv('RSS_HOST', '0.0.0.0')
     rss_port = int(os.getenv('RSS_PORT', '8000'))
@@ -224,7 +347,6 @@ async def run_app():
             with contextlib.suppress(asyncio.CancelledError):
                 await bootstrap_task
         await shutdown_services()
-
 
 async def register_bot_commands(bot):
     """注册机器人命令"""

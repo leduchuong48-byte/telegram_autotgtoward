@@ -60,6 +60,15 @@ class MessageContext:
         
         # 记录任何可能的错误
         self.errors = []
+
+        # 结构化停止原因（过滤链契约）
+        self.stop_reason = None
+        self.stop_reason_detail = ''
+        self.stop_stage = None
+
+        # 记录处理链被中断的结构化原因
+        self.stop_reason = None
+        self.stop_reason_detail = ''
         
         # 记录已转发的消息
         self.forwarded_messages = []

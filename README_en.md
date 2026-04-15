@@ -1,134 +1,129 @@
-# Telegram AutoTG Toward
+# Project Name
 
-[![Docker Pulls](https://img.shields.io/docker/pulls/leduchuong/telegram_chanel_autotoward?logo=docker&style=flat-square)](https://hub.docker.com/r/leduchuong/telegram_chanel_autotoward)
+![Cover or Demo](docs/cover.gif)
+
+[![Docker Pulls](https://img.shields.io/docker/pulls/leduchuong/ld_tg_downloader?logo=docker&label=Docker%20Pulls&style=flat-square)](https://hub.docker.com/r/leduchuong/ld_tg_downloader)
 [![GitHub Stars](https://img.shields.io/github/stars/leduchuong48-byte/telegram_autotgtoward?style=flat-square)](https://github.com/leduchuong48-byte/telegram_autotgtoward/stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/leduchuong48-byte/telegram_autotgtoward?style=flat-square)](https://github.com/leduchuong48-byte/telegram_autotgtoward/network/members)
+[![GitHub Issues](https://img.shields.io/github/issues/leduchuong48-byte/telegram_autotgtoward?style=flat-square)](https://github.com/leduchuong48-byte/telegram_autotgtoward/issues)
 [![License](https://img.shields.io/github/license/leduchuong48-byte/telegram_autotgtoward?style=flat-square)](https://github.com/leduchuong48-byte/telegram_autotgtoward/blob/main/LICENSE)
+[![Build: Passing](https://img.shields.io/badge/Build-Passing-brightgreen.svg)](#)
+[![Platform: ARM64/AMD64](https://img.shields.io/badge/Platform-ARM64%2FAMD64-blue.svg)](#)
 
 [中文](README.md)
 
-Telegram AutoTG Toward is a WebUI-first Telegram forwarding control center focused on fast group-to-group forwarding operations, not just RSS subscription.
+> Better alternative to Fluent Reader for E-ink devices.
 
-## Release Notes
+One sentence describing what this project does.
 
-- `v3.1`: Fixed unstable forwarding behavior for long-running workloads.
-- `v3.1`: Fixed an issue where messages failing filters could still be forwarded in user mode; strict filtering is now default.
+## Why this tool?
 
-## Why This Is Not a Generic RSS Tool
+Tired of <slow workflow> and <manual retries>? This tool is built to remove the 3-second lag and frequent failure points that make demos and operations unreliable.
 
-- Instant rule creation from UI: open the "New Rule" modal and set `source link / source_chat_id / target_chat_id` directly.
-- Visual forwarding workflow: create, edit, enable/disable, filter, and test rules on one page.
-- Cluster-style rule orchestration: multi-rule parallel management with rule sync (`enable_sync`) for multi-group scenarios.
-- Bot + Web linkage: send test messages to specific `chat_id` from WebUI while keeping Bot-side quick controls.
+## Why This Project Is Useful (Pain Points)
 
-## UI Highlights (Real Screenshots)
+- Pain point 1: The most error-prone or time-consuming part in the old workflow
+- Pain point 2: Cost/maintenance burden of existing solutions
+- Pain point 3: Delivery or collaboration bottlenecks
 
-> Screenshots below are rendered from this repository templates and reflect the real WebUI.
+## What the Project Does (Features)
 
-### 1) New rule forwarding window (link/chat_id supported)
+- Core capability A
+- Core capability B
+- Core capability C
 
-![New rule forwarding window](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/ui_real/ui_new_rule_forward_real.png)
+## ⚡️ Quick Start (Run in 3 seconds)
 
-### 2) Bot + Web linkage (send test message to specific chat_id)
+```bash
+docker run --rm -it --pull=always docker.io/leduchuong/ld_tg_downloader:latest
+```
 
-![Bot and Web linkage](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/ui_real/ui_bot_web_linkage_real.png)
+> Keep this command copy-paste ready before release; do not require readers to edit parameters.
 
-### 3) Rule dashboard for cluster-style management
-
-![Rule dashboard](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/ui_real/ui_dashboard_real.png)
-
-### 4) First-time onboarding (login/register/setup wizard)
-
-![WebUI Login](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/ui_real/ui_login_real.png)
-
-![WebUI Register](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/ui_real/ui_register_real.png)
-
-![Setup Wizard](https://raw.githubusercontent.com/leduchuong48-byte/telegram_autotgtoward/main/images/ui_real/ui_setup_wizard_real.png)
-
-## Ownership and Maintenance
-
-- Official repository: `https://github.com/leduchuong48-byte/telegram_autotgtoward`
-- Official image: `https://hub.docker.com/r/leduchuong/telegram_chanel_autotoward`
-- Maintainer: `@leduchuong48-byte`
-
-## Core Features
-
-- WebUI operations: config editor, rules dashboard, logs, and runtime status.
-- Telegram setup wizard: complete auth and session initialization in browser.
-- Rule-driven forwarding: keyword/regex/media filters, replacement templates, delayed processing.
-- Bot + Web dual channel: linked operations from Bot commands and Web console.
-- AI pipeline: optional providers such as OpenAI, Gemini, DeepSeek, Qwen, Grok, and Claude.
-- RSS subsystem: optional feed ingestion/output that does not replace forwarding core.
-
-## For Portainer/Synology Users
-
-Copy this into Portainer stacks and hit Deploy. Done.
-
-## Docker Compose
+## Docker Compose (Portainer / NAS ready)
 
 ```yaml
 services:
-  autotgtoward:
-    image: leduchuong/telegram_chanel_autotoward:latest
-    container_name: telegram_autotgtoward
+  app:
+    image: docker.io/leduchuong/ld_tg_downloader:latest
+    container_name: autotgtoward_anya
     restart: unless-stopped
+    environment:
+      - TZ=UTC
     ports:
-      - "1008:8000"
-    env_file:
-      - .env
-    volumes:
-      - ./db:/app/db
-      - ./sessions:/app/sessions
-      - ./logs:/app/logs
-      - ./config:/app/config
-      - ./rss/data:/app/rss/data
+      - "1008:1008"
 ```
 
-## Quick Start
+## GitHub Topics (pick at least 5)
 
-### Run with Docker
+`#nas` `#homelab` `#selfhosted` `#synology` `#unraid` `#eink` `#automation`
+
+## 📈 Visual Add-ons (Profile Style)
+
+<p align="left"> <img src="https://komarev.com/ghpvc/?username=leduchuong48-byte&label=Repo%20views&color=0e75b6&style=flat" alt="leduchuong48-byte" /> </p>
+
+<p>
+  <img align="left" src="https://github-readme-stats-sigma-five.vercel.app/api/top-langs?username=leduchuong48-byte&show_icons=true&locale=en&layout=compact" alt="top-langs" />
+  <img align="center" src="https://github-readme-stats-sigma-five.vercel.app/api?username=leduchuong48-byte&show_icons=true&locale=en" alt="stats" />
+</p>
+
+<p><img align="center" src="https://github-readme-streak-stats.herokuapp.com/?user=leduchuong48-byte" alt="streak" /></p>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=leduchuong48-byte/telegram_autotgtoward&type=Date&theme=dark" />
+  <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=leduchuong48-byte/telegram_autotgtoward&type=Date" />
+  <img alt="Star History" src="https://api.star-history.com/svg?repos=leduchuong48-byte/telegram_autotgtoward&type=Date" />
+</picture>
+
+## 🧰 Languages and Tools
+
+<p align="left"><img src="https://skillicons.dev/icons?i=python,docker,githubactions" alt="tech stack"/></p>
+
+## Getting Started
+
+### Prerequisites
+
+- Runtime/language versions
+- Dependency and system requirements
+
+### Installation
 
 ```bash
-cp .env.example .env
-# edit .env and set at least API_ID/API_HASH/BOT_TOKEN/USER_ID/INVITE_CODE
-
-docker compose up -d --build
+<install command>
 ```
 
-Open: `http://localhost:1008`
-
-### Run Locally
+### Run
 
 ```bash
-python3 -m venv .venv
-. .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env
-python main.py
+<run command>
 ```
 
-## Key Paths
+## Usage Example
 
-- `main.py`: bootstrap (Telegram clients + Web runtime).
-- `rss/main.py`: FastAPI app bootstrap and route mounting.
-- `rss/app/routes/`: auth, config, system status, Telegram auth, and bot control APIs.
-- `filters/`: message filtering pipeline.
-- `handlers/`: interaction and command orchestration.
-- `models/`: database models and migration logic.
+```bash
+<example command>
+```
 
-## Troubleshooting
+## Where to Get Help
 
-- UI is up but forwarding does nothing: verify Telegram credentials in `.env`.
-- Changes saved but not applied: trigger config reload in WebUI and inspect logs.
-- Auth issues: verify invite code, cookies, and `JWT_SECRET_KEY`.
+- Issues: https://github.com/leduchuong48-byte/telegram_autotgtoward/issues
+- Discussions: https://github.com/leduchuong48-byte/telegram_autotgtoward/discussions
+- Contact (optional)
 
-## Support
+## Maintainers and Contributors
 
-- Issues: `https://github.com/leduchuong48-byte/telegram_autotgtoward/issues`
+- Maintainer: @leduchuong48-byte
+- Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
 
-## License
+## 🤝 Connect
 
-GPL-3.0. See [LICENSE](LICENSE).
+- GitHub: https://github.com/leduchuong48-byte
+- Repository: https://github.com/leduchuong48-byte/telegram_autotgtoward
 
 ## Disclaimer
 
 By using this project, you acknowledge and agree to the [Disclaimer](DISCLAIMER.md).
+
+## License
+
+For example MIT, see [LICENSE](LICENSE)

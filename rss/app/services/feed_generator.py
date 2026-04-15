@@ -147,19 +147,19 @@ class FeedService:
                 if rss_config.rule_title:
                     fg.title(rss_config.rule_title)
                 else:
-                    fg.title(f'TG Forwarder RSS - Rule {rule_id}')
+                    fg.title(f'Telegram AutoFoward - Rule {rule_id}')
     
                 if rss_config.rule_description:
                     fg.description(rss_config.rule_description)
                 else:
-                    fg.description(f'TG Forwarder RSS - 规则 {rule_id} 的消息')
+                    fg.description(f'Telegram AutoFoward - 规则 {rule_id} 的消息')
                     
                 # 设置语言
                 fg.language(rss_config.language or 'zh-CN')
             else:
                 # 默认标题和描述
-                fg.title(f'TG Forwarder RSS - Rule {rule_id}')
-                fg.description(f'TG Forwarder RSS - 规则 {rule_id} 的消息')
+                fg.title(f'Telegram AutoFoward - Rule {rule_id}')
+                fg.description(f'Telegram AutoFoward - 规则 {rule_id} 的消息')
                 fg.language('zh-CN')
         finally:
             # 确保会话被关闭

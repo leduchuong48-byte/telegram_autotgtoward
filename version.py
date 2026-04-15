@@ -1,4 +1,4 @@
-VERSION = "3.1"
+VERSION = "3.2"
 APP_NAME = "telegram_chanel_autotoward"
 REPO_URL = "https://github.com/leduchuong48-byte/telegram_autotgtoward"
 
